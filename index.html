@@ -129,6 +129,7 @@
           <h2 class="text-base font-extrabold text-slate-900 tracking-wide flex items-center gap-2"><i class="fa-solid fa-chart-pie text-blue-700"></i> Distribución Monetaria del Inventario (RD$)</h2>
           <p class="text-xs text-slate-500 mt-0.5">Itabo y Herrera (principales) vs. resto de almacenes consolidados como Dependencia.</p>
         </div>
+        <p id="donaSeleccionInfo" class="text-center text-sm font-bold text-blue-900 mb-1 min-h-[20px]"></p>
         <div class="relative h-64 flex items-center justify-center"><canvas id="chartDona"></canvas></div>
       </div>
       <div class="mt-4 pt-4 border-t border-slate-200 space-y-2">
@@ -627,11 +628,29 @@ function renderDona(){
       <div class="text-right font-mono"><span class="text-amber-600 font-bold">${fmtCurr(v)}</span><span class="text-slate-500 text-[10px] ml-1">(${fmtPct(v/total*100)})</span></div>
     </div>`).join('') : '<div class="text-slate-500 italic py-1">Sin dependencias registradas.</div>';
 
+  // Determinar qué porción (arco) de la dona corresponde al almacén seleccionado,
+  // para "hacerla crecer" (offset hacia afuera) y mostrar su valor total.
+  let offsets = [0, 0, 0];
+  const infoEl = document.getElementById('donaSeleccionInfo');
+  if(almacenSel === 'TODOS'){
+    infoEl.innerText = '';
+  } else if(almacenSel.toLowerCase() === 'itabo'){
+    offsets = [45, 0, 0];
+    infoEl.innerText = `Itabo: ${fmtCurr(itabo)} (${fmtPct(itabo/total*100)} del valor total)`;
+  } else if(almacenSel.toLowerCase() === 'herrera'){
+    offsets = [0, 45, 0];
+    infoEl.innerText = `Herrera: ${fmtCurr(herrera)} (${fmtPct(herrera/total*100)} del valor total)`;
+  } else {
+    offsets = [0, 0, 45];
+    const valorAlm = valores[almacenSel] || 0;
+    infoEl.innerText = `${almacenSel}: ${fmtCurr(valorAlm)} (${fmtPct(valorAlm/total*100)} del valor total)`;
+  }
+
   if(charts.dona) charts.dona.destroy();
   charts.dona = new Chart(document.getElementById('chartDona').getContext('2d'), {
     type:'doughnut',
-    data:{ labels:['Itabo','Herrera','Dependencias (consolidado)'], datasets:[{ data:[itabo,herrera,dependencias], backgroundColor:['#1e3a8a','#0369a1','#f59e0b'], borderColor:'#ffffff', borderWidth:3 }]},
-    options:{ responsive:true, maintainAspectRatio:false,
+    data:{ labels:['Itabo','Herrera','Dependencias (consolidado)'], datasets:[{ data:[itabo,herrera,dependencias], backgroundColor:['#1e3a8a','#0369a1','#f59e0b'], borderColor:'#ffffff', borderWidth:3, offset:offsets }]},
+    options:{ responsive:true, maintainAspectRatio:false, animation:{ animateRotate:true, animateScale:true, duration:700, easing:'easeOutQuart' },
       plugins:{ legend:{position:'bottom', labels:{color:'#334155',font:{size:11,weight:'bold'}}},
         tooltip:{ callbacks:{ label:c=> ` ${c.label}: ${fmtCurr(c.raw)} (${fmtPct(c.raw/total*100)})` } } },
       cutout:'65%' }
@@ -640,13 +659,19 @@ function renderDona(){
 
 function renderVolumen(){
   const map = aggVolPorAlmacen();
-  const labels = Object.keys(map);
-  const data = Object.values(map);
+  let labels, data;
+  if(almacenSel === 'TODOS'){
+    labels = Object.keys(map);
+    data = Object.values(map);
+  } else {
+    labels = [almacenSel];
+    data = [map[almacenSel] || 0];
+  }
   if(charts.vol) charts.vol.destroy();
   charts.vol = new Chart(document.getElementById('chartVolumen').getContext('2d'), {
     type:'bar',
     data:{ labels, datasets:[{ label:'Unidades (Libre utilización)', data, backgroundColor:'rgba(16,185,129,.7)', borderColor:'#10b981', borderWidth:2, borderRadius:6 }]},
-    options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}},
+    options:{ responsive:true, maintainAspectRatio:false, animation:{ duration:600, easing:'easeOutQuart' }, plugins:{legend:{display:false}},
       scales:{ x:{grid:{color:'rgba(15,23,42,.08)'},ticks:{color:'#475569'}}, y:{grid:{color:'rgba(15,23,42,.08)'},ticks:{color:'#475569'},beginAtZero:true} } }
   });
 }
@@ -654,13 +679,19 @@ function renderVolumen(){
 function renderMonetario(){
   const map = aggValorPorAlmacen();
   const total = Object.values(map).reduce((a,b)=>a+b,0) || 1;
-  const labels = Object.keys(map);
-  const data = Object.values(map);
+  let labels, data;
+  if(almacenSel === 'TODOS'){
+    labels = Object.keys(map);
+    data = Object.values(map);
+  } else {
+    labels = [almacenSel];
+    data = [map[almacenSel] || 0];
+  }
   if(charts.mon) charts.mon.destroy();
   charts.mon = new Chart(document.getElementById('chartMonetario').getContext('2d'), {
     type:'bar',
     data:{ labels, datasets:[{ label:'Valor (RD$)', data, backgroundColor:'rgba(59,130,246,.7)', borderColor:'#3b82f6', borderWidth:2, borderRadius:6 }]},
-    options:{ responsive:true, maintainAspectRatio:false,
+    options:{ responsive:true, maintainAspectRatio:false, animation:{ duration:600, easing:'easeOutQuart' },
       plugins:{ legend:{display:false}, tooltip:{ callbacks:{ label:c=>` ${fmtCurr(c.raw)} (${fmtPct(c.raw/total*100)} del total general)` } } },
       scales:{ x:{grid:{color:'rgba(15,23,42,.08)'},ticks:{color:'#475569'}}, y:{grid:{color:'rgba(15,23,42,.08)'},ticks:{color:'#475569'},beginAtZero:true} } }
   });
