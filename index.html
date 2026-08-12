@@ -84,6 +84,9 @@
     <button onclick="cambiarPagina(3, this)" class="btn-pagina px-5 py-2.5 rounded-lg text-sm font-bold border-2 border-white bg-transparent text-white hover:bg-white/10 transition-all">
       <i class="fa-solid fa-ranking-star mr-1.5"></i> 3. Ranking Top 10 Materiales
     </button>
+    <button onclick="cambiarPagina(4, this)" class="btn-pagina px-5 py-2.5 rounded-lg text-sm font-bold border-2 border-white bg-transparent text-white hover:bg-white/10 transition-all">
+      <i class="fa-solid fa-tags mr-1.5"></i> 4. Familia de Materiales
+    </button>
   </nav>
 
   <section class="bg-white p-5 rounded-2xl border border-slate-200 shadow-xl">
@@ -111,10 +114,19 @@
       <p class="text-[11px] text-blue-700 font-semibold mt-1" id="kpiValorPct">—</p>
     </div>
     <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-lg">
-      <p class="text-slate-500 text-xs font-bold uppercase tracking-wider">Volumen Físico (Libre Utilización)</p>
-      <p class="text-2xl md:text-3xl font-black text-emerald-700 mt-2 font-mono cursor-help" id="kpiVolumen">0</p>
-      <p class="text-[11px] text-emerald-500 font-semibold mt-1" id="kpiVolumenPct">—</p>
-      <div class="text-[10px] text-slate-500 flex flex-wrap gap-x-2 gap-y-0.5 mt-1.5 pt-1.5 border-t border-slate-100" id="kpiVolumenDesglose"></div>
+      <p class="text-slate-500 text-xs font-bold uppercase tracking-wider">Salud del Inventario</p>
+      <div class="grid grid-cols-2 gap-3 mt-2">
+        <div>
+          <p class="text-[10px] text-slate-500 uppercase font-bold tracking-wide">Capital Inmovilizado</p>
+          <p class="text-lg md:text-xl font-black text-rose-700 font-mono cursor-help" id="kpiDeadStock">RD$ 0</p>
+          <p class="text-[10px] text-rose-500 font-semibold mt-0.5" id="kpiDeadStockPct">—</p>
+        </div>
+        <div class="border-l border-slate-100 pl-3">
+          <p class="text-[10px] text-slate-500 uppercase font-bold tracking-wide">Días de Cobertura</p>
+          <p class="text-lg md:text-xl font-black text-blue-700 font-mono cursor-help" id="kpiDIO">— d</p>
+          <p class="text-[10px] text-blue-500 font-semibold mt-0.5" id="kpiDIOInfo">—</p>
+        </div>
+      </div>
     </div>
     <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-lg">
       <p class="text-slate-500 text-xs font-bold uppercase tracking-wider">Salidas Clase 201 (2026)</p>
@@ -252,6 +264,36 @@
     </div>
   </section>
   </div>
+
+  <div id="pagina4" class="hidden space-y-6">
+  <section class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+    <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-xl space-y-4">
+      <div class="border-b border-slate-200 pb-3">
+        <h2 class="text-base font-extrabold text-slate-900 tracking-wide flex items-center gap-2"><i class="fa-solid fa-cubes text-emerald-700"></i> Cantidad por Familia de Material</h2>
+        <p class="text-xs text-slate-500 mt-0.5">Suma de existencia por familia (todas las unidades de medida combinadas).</p>
+      </div>
+      <div class="relative h-96"><canvas id="chartFamiliaCantidad"></canvas></div>
+    </div>
+    <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-xl space-y-4">
+      <div class="border-b border-slate-200 pb-3">
+        <h2 class="text-base font-extrabold text-slate-900 tracking-wide flex items-center gap-2"><i class="fa-solid fa-sack-dollar text-blue-700"></i> Valor por Familia de Material (RD$)</h2>
+        <p class="text-xs text-slate-500 mt-0.5">Suma del valor de existencia por familia.</p>
+      </div>
+      <div class="relative h-96"><canvas id="chartFamiliaValor"></canvas></div>
+    </div>
+  </section>
+
+  <section class="bg-white p-6 rounded-2xl border border-slate-200 shadow-xl">
+    <div class="border-b border-slate-200 pb-3 mb-4">
+      <h2 class="text-base font-extrabold text-slate-900 tracking-wide flex items-center gap-2"><i class="fa-solid fa-chart-pie text-amber-600"></i> % de Artículos (SKU) por Familia</h2>
+      <p class="text-xs text-slate-500 mt-0.5">Proporción de materiales distintos catalogados en cada familia, dentro de la selección actual.</p>
+    </div>
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 items-center">
+      <div class="relative h-96"><canvas id="chartFamiliaDona"></canvas></div>
+      <div class="max-h-96 overflow-y-auto pr-1 space-y-1.5 custom-scrollbar text-xs" id="listaFamilias"></div>
+    </div>
+  </section>
+  </div>
 </main>
 
 <script>
@@ -268,25 +310,37 @@ const fmtPct = n => (n||0).toFixed(1) + '%';
 // Formato compacto para cifras grandes en tarjetas/resumen — el valor exacto siempre
 // queda disponible al pasar el mouse (atributo title / tooltip de la gráfica).
 const fmtCompactNum = n => {
+  // Nomenclatura financiera en español: "MM" = millones (para evitar la confusión
+  // de "B" = billion en inglés, que en español significa 10^12, no 10^9).
+  // Ej: 20,300,000,000 -> "20,300 MM" (veinte mil trescientos millones).
   n = Number(n)||0;
+  const sign = n < 0 ? '-' : '';
   const abs = Math.abs(n);
-  if(abs >= 1e9) return (n/1e9).toFixed(2).replace(/\.00$/,'') + 'B';
-  if(abs >= 1e6) return (n/1e6).toFixed(2).replace(/\.00$/,'') + 'M';
-  if(abs >= 1e3) return (n/1e3).toFixed(1).replace(/\.0$/,'') + 'K';
-  return fmtInt(n);
+  if(abs >= 1e6){
+    const millones = abs/1e6;
+    if(millones >= 1000){
+      // Miles de millones: se muestra como entero agrupado por miles + "MM"
+      return sign + new Intl.NumberFormat('en-US').format(Math.round(millones)) + ' MM';
+    }
+    return sign + millones.toFixed(2).replace(/\.00$/,'') + ' MM';
+  }
+  if(abs >= 1e3) return sign + (abs/1e3).toFixed(1).replace(/\.0$/,'') + 'K';
+  return sign + fmtInt(abs);
 };
 const fmtCompactCurr = n => 'RD$ ' + fmtCompactNum(n);
 const MESES = {1:'Ene',2:'Feb',3:'Mar',4:'Abr',5:'May',6:'Jun',7:'Jul',8:'Ago',9:'Sep',10:'Oct',11:'Nov',12:'Dic'};
+const PALETA_FAMILIAS = ['#1e3a8a','#0369a1','#0d9488','#059669','#65a30d','#ca8a04','#d97706','#ea580c','#dc2626','#e11d48','#be185d','#9333ea','#7c3aed','#4f46e5','#2563eb','#0891b2','#16a34a','#84cc16','#f59e0b','#64748b'];
 
 let RAW = { inventario: [], movimientos: [] };
 let almacenSel = 'TODOS';
 let charts = {};
 let unidadPorCodigo = null;
+let precioPorCodigoCache = null;
 
 function norm(v){ if(v===null||v===undefined) return ''; return String(v).replace(/\u00a0/g,'').trim(); }
 
 function cambiarPagina(n, btn){
-  [1,2,3].forEach(i=>{
+  [1,2,3,4].forEach(i=>{
     document.getElementById('pagina'+i).classList.toggle('hidden', i!==n);
   });
   document.querySelectorAll('.btn-pagina').forEach(b=>{
@@ -472,11 +526,25 @@ function onFileSelected(event){
 function procesarBuffer(buffer){
   const wb = XLSX.read(new Uint8Array(buffer), { type:'array', cellDates:true });
 
+  const nombreMaterialMaster = wb.SheetNames.find(n => n.toLowerCase().includes('material master')) || wb.SheetNames[0];
   const nombreExistencia = wb.SheetNames.find(n => n.toLowerCase().includes('existencia')) || wb.SheetNames[2] || wb.SheetNames[0];
   const nombreMovimientos = wb.SheetNames.find(n => n.toLowerCase().includes('movimiento')) || wb.SheetNames[1];
 
+  const wsMaterialMaster = wb.Sheets[nombreMaterialMaster];
   const wsExistencia = wb.Sheets[nombreExistencia];
   const wsMovimientos = wb.Sheets[nombreMovimientos];
+
+  // ---- HOJA 1: MATERIAL MASTER ---- B=cod E=familia
+  const familiaPorCodigo = {};
+  if(wsMaterialMaster){
+    const rows = XLSX.utils.sheet_to_json(wsMaterialMaster, { header:1 });
+    rows.forEach((row, idx) => {
+      if(idx === 0 || !row) return;
+      const cod = norm(row[1]);
+      const fam = norm(row[4]);
+      if(cod && fam) familiaPorCodigo[cod] = fam;
+    });
+  }
 
   // ---- HOJA 3: EXISTENCIA ---- A=desc B=cod C=uni D=cant(libre util) F=valor G=codAlm H=nomAlm
   const inventario = [];
@@ -495,7 +563,8 @@ function procesarBuffer(buffer){
       if(!cod || !desc) return;
       if(codAlm && nomAlm) mapaAlmacenes[codAlm] = nomAlm;
       const almFinal = nomAlm || mapaAlmacenes[codAlm] || ALMACEN_MAP_FALLBACK[codAlm] || codAlm || 'Sin Almacén';
-      inventario.push({ cod, desc, uni, cant, valor: Math.round(valor*100)/100, codAlm, alm: almFinal });
+      const fam = familiaPorCodigo[cod] || 'Sin Familia';
+      inventario.push({ cod, desc, uni, cant, valor: Math.round(valor*100)/100, codAlm, alm: almFinal, fam });
     });
   }
 
@@ -527,6 +596,7 @@ function procesarBuffer(buffer){
 
   RAW = { inventario, movimientos };
   unidadPorCodigo = null; // se reconstruye con los datos nuevos en la próxima consulta
+  precioPorCodigoCache = null;
   initBotones();
   render();
 }
@@ -580,10 +650,6 @@ function render(){
   const movRotacion = mov.filter(m=>m.clase==='101' || m.clase==='201');
 
   const valorGlobal = RAW.inventario.reduce((a,i)=>a+i.valor,0) || 1;
-  // El volumen suma TODAS las unidades de medida indiscriminadamente (piezas, metros,
-  // galones, cajas, etc.) — se trata como un equivalente único de "cuánto hay",
-  // sin importar cómo se mida cada material.
-  const volGlobal = RAW.inventario.reduce((a,i)=>a+i.cant,0) || 1;
 
   const valorSel = inv.reduce((a,i)=>a+i.valor,0);
   const volSel = inv.reduce((a,i)=>a+i.cant,0);
@@ -594,10 +660,7 @@ function render(){
   kpiValorEl.title = 'Valor exacto: ' + fmtCurr(valorSel);
   document.getElementById('kpiValorPct').innerText = fmtPct(valorSel/valorGlobal*100) + ' del valor total general';
 
-  const kpiVolEl = document.getElementById('kpiVolumen');
-  kpiVolEl.innerText = fmtCompactNum(volSel) + ' u.';
-  kpiVolEl.title = 'Cantidad exacta: ' + fmtInt(volSel) + ' unidades (todas las medidas combinadas)';
-  document.getElementById('kpiVolumenPct').innerText = fmtPct(volSel/volGlobal*100) + ' del volumen total general';
+  renderSaludInventario(inv, mov, valorSel);
 
   const kpiSalEl = document.getElementById('kpiSalidas');
   kpiSalEl.innerText = fmtCompactNum(salidasSel) + ' u.';
@@ -615,6 +678,68 @@ function render(){
   renderTop10Valor(inv);
   renderTop10MayorVol(inv);
   renderTop10MenorVol(inv);
+  renderFamilias(inv);
+}
+
+function precioPorCodigo(cod){
+  if(!precioPorCodigoCache){
+    // Precio promedio ponderado por código (valor total / cantidad total),
+    // calculado sobre TODO el inventario, para monetizar consumos de la Hoja 2.
+    const acumValor = {}, acumCant = {};
+    RAW.inventario.forEach(i=>{
+      acumValor[i.cod] = (acumValor[i.cod]||0) + i.valor;
+      acumCant[i.cod] = (acumCant[i.cod]||0) + i.cant;
+    });
+    precioPorCodigoCache = {};
+    Object.keys(acumValor).forEach(cod=>{
+      precioPorCodigoCache[cod] = acumCant[cod] > 0 ? acumValor[cod]/acumCant[cod] : 0;
+    });
+  }
+  return precioPorCodigoCache[cod] || 0;
+}
+
+function renderSaludInventario(inv, mov, valorSel){
+  // --- CAPITAL INMOVILIZADO (Dead Stock) ---
+  // Materiales con valor en inventario que NO registran ningún movimiento (de ninguna
+  // clase) durante todo el periodo disponible en los datos cargados.
+  const movidos = new Set();
+  mov.forEach(m => movidos.add(m.cod + '|' + m.alm));
+  let deadStockValor = 0, deadStockCount = 0;
+  inv.forEach(i=>{
+    if(i.valor > 0 && !movidos.has(i.cod + '|' + i.alm)){
+      deadStockValor += i.valor;
+      deadStockCount++;
+    }
+  });
+  const kpiDS = document.getElementById('kpiDeadStock');
+  kpiDS.innerText = fmtCompactCurr(deadStockValor);
+  kpiDS.title = 'Valor exacto: ' + fmtCurr(deadStockValor) + ' en ' + fmtInt(deadStockCount) + ' material(es) sin ningún movimiento registrado en el periodo disponible';
+  document.getElementById('kpiDeadStockPct').innerText = fmtPct(valorSel > 0 ? (deadStockValor/valorSel*100) : 0) + ' del valor en vista';
+
+  // --- DÍAS DE COBERTURA (DIO) ---
+  // Ritmo de consumo = valor monetario de las salidas 201, usando el precio promedio
+  // de cada material (valor/cantidad en existencia) para no mezclar unidades distintas.
+  const mov201 = mov.filter(m=>m.clase==='201');
+  let consumoValor = 0;
+  const mesesConDatos = new Set();
+  mov201.forEach(m=>{
+    consumoValor += m.cant * precioPorCodigo(m.cod);
+    mesesConDatos.add(m.anio + '-' + m.mes);
+  });
+  const numMeses = mesesConDatos.size || 1;
+  const consumoDiario = consumoValor / (numMeses * 30);
+  const kpiDIO = document.getElementById('kpiDIO');
+  const kpiDIOInfo = document.getElementById('kpiDIOInfo');
+  if(consumoDiario > 0){
+    const dias = valorSel / consumoDiario;
+    kpiDIO.innerText = fmtInt(dias) + ' d';
+    kpiDIO.title = 'Cobertura estimada: ' + dias.toFixed(1) + ' días, calculada con ' + numMeses + ' mes(es) de consumo disponibles en los datos';
+    kpiDIOInfo.innerText = '≈ ' + fmtInt(dias/30) + ' meses de stock';
+  } else {
+    kpiDIO.innerText = 'N/D';
+    kpiDIO.title = 'Sin salidas clase 201 registradas en este filtro para estimar el ritmo de consumo';
+    kpiDIOInfo.innerText = 'Sin consumo registrado';
+  }
 }
 
 function renderDesgloseUnidades(inv){
@@ -627,14 +752,7 @@ function renderDesgloseUnidades(inv){
   });
   const entries = Object.entries(porUnidad).filter(([,v])=>v>0).sort((a,b)=>b[1]-a[1]);
 
-  // Chip compacto dentro de la tarjeta KPI (Página 1)
-  const miniEl = document.getElementById('kpiVolumenDesglose');
-  miniEl.innerHTML = entries.length
-    ? entries.slice(0,4).map(([u,v])=>`<span class="cursor-help" title="${u}: ${fmtInt(v)} exacto"><b class="text-slate-700">${u}:</b> ${fmtCompactNum(v)}</span>`).join('')
-      + (entries.length > 4 ? `<span class="text-slate-400">+${entries.length-4} más</span>` : '')
-    : '<span class="text-slate-400">Sin datos</span>';
-
-  // Panel grande y detallado (Página 2)
+  // Panel detallado (Página 2)
   const grandeEl = document.getElementById('desgloseUnidadesGrande');
   grandeEl.innerHTML = entries.length ? entries.map(([u,v])=>`
     <div class="flex items-center gap-2 bg-emerald-50 border border-emerald-200 rounded-xl px-4 py-2.5 cursor-help" title="${u}: ${fmtInt(v)} exacto">
@@ -876,6 +994,70 @@ function renderTop10MenorVol(inv){
     <td class="p-3 max-w-xs truncate" title="${it.desc}">${it.desc}</td>
     <td class="p-3 text-right font-bold text-rose-700 font-mono">${fmtInt(it.cant)} ${it.uni}</td></tr>`).join('')
     : '<tr><td colspan="4" class="p-4 text-center text-slate-500">Sin datos.</td></tr>';
+}
+
+function renderFamilias(inv){
+  // Cantidad (Hoja3 Col D) y Valor (Hoja3 Col F) agrupados por Familia (Hoja1 Col E).
+  const cantPorFam = {};
+  const valorPorFam = {};
+  const skusPorFam = {};
+  inv.forEach(i=>{
+    const f = i.fam || 'Sin Familia';
+    cantPorFam[f] = (cantPorFam[f]||0) + i.cant;
+    valorPorFam[f] = (valorPorFam[f]||0) + i.valor;
+    if(!skusPorFam[f]) skusPorFam[f] = new Set();
+    skusPorFam[f].add(i.cod);
+  });
+
+  const familiasCant = Object.entries(cantPorFam).sort((a,b)=>b[1]-a[1]);
+  const familiasValor = Object.entries(valorPorFam).sort((a,b)=>b[1]-a[1]);
+
+  // --- Gráfico 1: Cantidad por Familia ---
+  if(charts.famCant) charts.famCant.destroy();
+  charts.famCant = new Chart(document.getElementById('chartFamiliaCantidad').getContext('2d'), {
+    type:'bar',
+    data:{ labels: familiasCant.map(([f])=>f),
+      datasets:[{ label:'Cantidad', data: familiasCant.map(([,v])=>v), backgroundColor:'rgba(16,185,129,.7)', borderColor:'#10b981', borderWidth:2, borderRadius:6 }] },
+    options:{ indexAxis:'y', responsive:true, maintainAspectRatio:false, animation:{ duration:600, easing:'easeOutQuart' },
+      plugins:{ legend:{display:false}, tooltip:{ callbacks:{ label:c=>` ${fmtInt(c.raw)} unidades (exacto, todas las medidas combinadas)` } } },
+      scales:{ x:{grid:{color:'rgba(15,23,42,.08)'},ticks:{color:'#475569', callback:v=>fmtCompactNum(v)},beginAtZero:true},
+        y:{grid:{display:false},ticks:{color:'#334155',font:{size:11}}} } }
+  });
+
+  // --- Gráfico 2: Valor por Familia ---
+  if(charts.famValor) charts.famValor.destroy();
+  charts.famValor = new Chart(document.getElementById('chartFamiliaValor').getContext('2d'), {
+    type:'bar',
+    data:{ labels: familiasValor.map(([f])=>f),
+      datasets:[{ label:'Valor', data: familiasValor.map(([,v])=>v), backgroundColor:'rgba(59,130,246,.7)', borderColor:'#3b82f6', borderWidth:2, borderRadius:6 }] },
+    options:{ indexAxis:'y', responsive:true, maintainAspectRatio:false, animation:{ duration:600, easing:'easeOutQuart' },
+      plugins:{ legend:{display:false}, tooltip:{ callbacks:{ label:c=>` ${fmtCurr(c.raw)} (exacto)` } } },
+      scales:{ x:{grid:{color:'rgba(15,23,42,.08)'},ticks:{color:'#475569', callback:v=>fmtCompactCurr(v)},beginAtZero:true},
+        y:{grid:{display:false},ticks:{color:'#334155',font:{size:11}}} } }
+  });
+
+  // --- Gráfico 3: % de Artículos (SKU distintos) por Familia ---
+  const skuCounts = Object.entries(skusPorFam).map(([f,set])=>[f, set.size]).sort((a,b)=>b[1]-a[1]);
+  const totalSkus = skuCounts.reduce((a,[,c])=>a+c,0) || 1;
+
+  if(charts.famDona) charts.famDona.destroy();
+  charts.famDona = new Chart(document.getElementById('chartFamiliaDona').getContext('2d'), {
+    type:'doughnut',
+    data:{ labels: skuCounts.map(([f])=>f),
+      datasets:[{ data: skuCounts.map(([,c])=>c), backgroundColor: skuCounts.map((_,i)=>PALETA_FAMILIAS[i % PALETA_FAMILIAS.length]), borderColor:'#ffffff', borderWidth:2 }] },
+    options:{ responsive:true, maintainAspectRatio:false, animation:{ duration:700, easing:'easeOutQuart' },
+      plugins:{ legend:{display:false}, tooltip:{ callbacks:{ label:c=>` ${c.label}: ${fmtInt(c.raw)} SKU (${fmtPct(c.raw/totalSkus*100)})` } } },
+      cutout:'55%' }
+  });
+
+  const listaEl = document.getElementById('listaFamilias');
+  listaEl.innerHTML = skuCounts.map(([f,c], i)=>`
+    <div class="flex items-center gap-2 py-1.5 px-2.5 rounded-lg bg-slate-50 border border-slate-200">
+      <span class="w-3 h-3 rounded-full flex-shrink-0" style="background:${PALETA_FAMILIAS[i % PALETA_FAMILIAS.length]}"></span>
+      <span class="font-semibold text-slate-700 flex-1 truncate">${f}</span>
+      <span class="font-mono font-bold text-slate-900">${fmtInt(c)}</span>
+      <span class="text-slate-500 text-[10px] w-14 text-right">(${fmtPct(c/totalSkus*100)})</span>
+    </div>`).join('');
 }
 
 // Al abrir el dashboard, busca automáticamente los datos ya compartidos.
