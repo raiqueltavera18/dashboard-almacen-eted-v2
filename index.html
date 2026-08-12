@@ -59,8 +59,7 @@
     <button onclick="toggleBuscador()" class="w-full flex items-center justify-between gap-3 text-left group">
       <div class="flex-1">
         <span class="text-xs font-bold text-emerald-700 uppercase tracking-wider flex items-center gap-2"><i class="fa-solid fa-magnifying-glass"></i> Buscador de Materiales — Disponibilidad por Almacén</span>
-        <p class="text-xs text-slate-500 mt-0.5">Escribe el código SAP (o parte de la descripción) para ver en qué almacenes hay existencia y cuánto.</p>
-      </div>
+        </div>
       <span class="flex-shrink-0 w-11 h-11 rounded-full bg-emerald-600 group-hover:bg-emerald-700 text-white flex items-center justify-center shadow-md transition-colors">
         <i class="fa-solid fa-magnifying-glass text-base"></i>
       </span>
@@ -108,24 +107,22 @@
   <section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
     <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-lg">
       <p class="text-slate-500 text-xs font-bold uppercase tracking-wider">Valor Total en Inventario</p>
-      <p class="text-2xl md:text-3xl font-black text-blue-900 mt-2 font-mono" id="kpiValor">RD$ 0.00</p>
+      <p class="text-2xl md:text-3xl font-black text-blue-900 mt-2 font-mono cursor-help" id="kpiValor">RD$ 0.00</p>
       <p class="text-[11px] text-blue-700 font-semibold mt-1" id="kpiValorPct">—</p>
     </div>
     <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-lg">
       <p class="text-slate-500 text-xs font-bold uppercase tracking-wider">Volumen Físico (Libre Utilización)</p>
-      <p class="text-2xl md:text-3xl font-black text-emerald-700 mt-2 font-mono" id="kpiVolumen">0</p>
+      <p class="text-2xl md:text-3xl font-black text-emerald-700 mt-2 font-mono cursor-help" id="kpiVolumen">0</p>
       <p class="text-[11px] text-emerald-500 font-semibold mt-1" id="kpiVolumenPct">—</p>
       <div class="text-[10px] text-slate-500 flex flex-wrap gap-x-2 gap-y-0.5 mt-1.5 pt-1.5 border-t border-slate-100" id="kpiVolumenDesglose"></div>
     </div>
     <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-lg">
       <p class="text-slate-500 text-xs font-bold uppercase tracking-wider">Salidas Clase 201 (2026)</p>
-      <p class="text-2xl md:text-3xl font-black text-amber-600 mt-2 font-mono" id="kpiSalidas">0 u.</p>
-      <p class="text-[11px] text-amber-500/80 font-semibold mt-1">Consumo a centro de coste</p>
+      <p class="text-2xl md:text-3xl font-black text-amber-600 mt-2 font-mono cursor-help" id="kpiSalidas">0 u.</p>
     </div>
     <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-lg">
       <p class="text-slate-500 text-xs font-bold uppercase tracking-wider">Materiales (SKU) en Vista</p>
       <p class="text-2xl md:text-3xl font-black text-purple-700 mt-2 font-mono" id="kpiSKU">0</p>
-      <p class="text-[11px] text-purple-700 font-semibold mt-1">Materiales filtrados</p>
     </div>
   </section>
 
@@ -133,14 +130,14 @@
     <div class="lg:col-span-2 bg-white p-6 rounded-2xl border border-slate-200 shadow-xl space-y-4">
       <div class="border-b border-slate-200 pb-3">
         <h2 class="text-base font-extrabold text-slate-900 tracking-wide flex items-center gap-2"><i class="fa-solid fa-chart-column text-amber-600"></i> Movimientos Mensuales: Entradas (101) vs Salidas (201)</h2>
-        <p class="text-xs text-slate-500 mt-0.5">Cantidad de movimientos (transacciones) registrados por mes — Entradas hacia arriba en verde, Salidas hacia abajo en rojo.</p>
+        <p class="text-xs text-slate-500 mt-0.5">Cantidad de movimientos por mes.</p>
       </div>
       <div class="relative h-[420px]"><canvas id="chartSalidas"></canvas></div>
     </div>
     <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-xl space-y-4">
       <div class="border-b border-slate-200 pb-3">
         <h2 class="text-base font-extrabold text-slate-900 tracking-wide flex items-center gap-2"><i class="fa-solid fa-arrows-turn-to-dots text-amber-600"></i> Otros Movimientos</h2>
-        <p class="text-xs text-slate-500 mt-0.5">Traslados, anulaciones y demás clases (excluye 101 y 201), por mes.</p>
+        <p class="text-xs text-slate-500 mt-0.5">Traslados, anulaciones y otras clases, por mes.</p>
       </div>
       <div class="relative h-[420px]"><canvas id="chartOtros"></canvas></div>
     </div>
@@ -153,7 +150,7 @@
       <div>
         <div class="border-b border-slate-200 pb-3 mb-4">
           <h2 class="text-base font-extrabold text-slate-900 tracking-wide flex items-center gap-2"><i class="fa-solid fa-chart-pie text-blue-700"></i> Distribución Monetaria del Inventario (RD$)</h2>
-          <p class="text-xs text-slate-500 mt-0.5">Itabo y Herrera (principales) vs. resto de almacenes consolidados como Dependencia.</p>
+          <p class="text-xs text-slate-500 mt-0.5">Itabo y Herrera vs. resto consolidado como Dependencia.</p>
         </div>
         <p id="donaSeleccionInfo" class="text-center text-sm font-bold text-blue-900 mb-1 min-h-[20px]"></p>
         <div class="relative h-80 flex items-center justify-center"><canvas id="chartDona"></canvas></div>
@@ -185,7 +182,7 @@
   <section class="bg-white p-6 rounded-2xl border border-slate-200 shadow-xl">
     <div class="border-b border-slate-200 pb-3 mb-4">
       <h2 class="text-base font-extrabold text-slate-900 tracking-wide flex items-center gap-2"><i class="fa-solid fa-layer-group text-emerald-700"></i> Volumen Total por Unidad de Medida</h2>
-      <p class="text-xs text-slate-500 mt-0.5">Desglose separado por tipo de unidad (piezas, metros, cajas, etc.) para evitar confusión al mezclar magnitudes distintas.</p>
+      <p class="text-xs text-slate-500 mt-0.5">Por tipo de unidad, para no mezclar magnitudes distintas.</p>
     </div>
     <div class="flex flex-wrap gap-3" id="desgloseUnidadesGrande"></div>
   </section>
@@ -268,6 +265,17 @@ const ALMACEN_MAP_FALLBACK = {
 const fmtInt = n => new Intl.NumberFormat('en-US').format(Math.round(n||0));
 const fmtCurr = n => 'RD$ ' + new Intl.NumberFormat('en-US',{minimumFractionDigits:2,maximumFractionDigits:2}).format(n||0);
 const fmtPct = n => (n||0).toFixed(1) + '%';
+// Formato compacto para cifras grandes en tarjetas/resumen — el valor exacto siempre
+// queda disponible al pasar el mouse (atributo title / tooltip de la gráfica).
+const fmtCompactNum = n => {
+  n = Number(n)||0;
+  const abs = Math.abs(n);
+  if(abs >= 1e9) return (n/1e9).toFixed(2).replace(/\.00$/,'') + 'B';
+  if(abs >= 1e6) return (n/1e6).toFixed(2).replace(/\.00$/,'') + 'M';
+  if(abs >= 1e3) return (n/1e3).toFixed(1).replace(/\.0$/,'') + 'K';
+  return fmtInt(n);
+};
+const fmtCompactCurr = n => 'RD$ ' + fmtCompactNum(n);
 const MESES = {1:'Ene',2:'Feb',3:'Mar',4:'Abr',5:'May',6:'Jun',7:'Jul',8:'Ago',9:'Sep',10:'Oct',11:'Nov',12:'Dic'};
 
 let RAW = { inventario: [], movimientos: [] };
@@ -581,11 +589,20 @@ function render(){
   const volSel = inv.reduce((a,i)=>a+i.cant,0);
   const salidasSel = mov201.reduce((a,m)=>a+m.cant,0);
 
-  document.getElementById('kpiValor').innerText = fmtCurr(valorSel);
+  const kpiValorEl = document.getElementById('kpiValor');
+  kpiValorEl.innerText = fmtCompactCurr(valorSel);
+  kpiValorEl.title = 'Valor exacto: ' + fmtCurr(valorSel);
   document.getElementById('kpiValorPct').innerText = fmtPct(valorSel/valorGlobal*100) + ' del valor total general';
-  document.getElementById('kpiVolumen').innerText = fmtInt(volSel) + ' u.';
+
+  const kpiVolEl = document.getElementById('kpiVolumen');
+  kpiVolEl.innerText = fmtCompactNum(volSel) + ' u.';
+  kpiVolEl.title = 'Cantidad exacta: ' + fmtInt(volSel) + ' unidades (todas las medidas combinadas)';
   document.getElementById('kpiVolumenPct').innerText = fmtPct(volSel/volGlobal*100) + ' del volumen total general';
-  document.getElementById('kpiSalidas').innerText = fmtInt(salidasSel) + ' u.';
+
+  const kpiSalEl = document.getElementById('kpiSalidas');
+  kpiSalEl.innerText = fmtCompactNum(salidasSel) + ' u.';
+  kpiSalEl.title = 'Cantidad exacta: ' + fmtInt(salidasSel) + ' unidades';
+
   document.getElementById('kpiSKU').innerText = fmtInt(inv.length);
   renderDesgloseUnidades(inv);
 
@@ -613,16 +630,16 @@ function renderDesgloseUnidades(inv){
   // Chip compacto dentro de la tarjeta KPI (Página 1)
   const miniEl = document.getElementById('kpiVolumenDesglose');
   miniEl.innerHTML = entries.length
-    ? entries.slice(0,4).map(([u,v])=>`<span><b class="text-slate-700">${u}:</b> ${fmtInt(v)}</span>`).join('')
+    ? entries.slice(0,4).map(([u,v])=>`<span class="cursor-help" title="${u}: ${fmtInt(v)} exacto"><b class="text-slate-700">${u}:</b> ${fmtCompactNum(v)}</span>`).join('')
       + (entries.length > 4 ? `<span class="text-slate-400">+${entries.length-4} más</span>` : '')
     : '<span class="text-slate-400">Sin datos</span>';
 
   // Panel grande y detallado (Página 2)
   const grandeEl = document.getElementById('desgloseUnidadesGrande');
   grandeEl.innerHTML = entries.length ? entries.map(([u,v])=>`
-    <div class="flex items-center gap-2 bg-emerald-50 border border-emerald-200 rounded-xl px-4 py-2.5">
+    <div class="flex items-center gap-2 bg-emerald-50 border border-emerald-200 rounded-xl px-4 py-2.5 cursor-help" title="${u}: ${fmtInt(v)} exacto">
       <span class="text-xs font-bold text-emerald-800 uppercase">${u}</span>
-      <span class="text-sm font-mono font-black text-emerald-900">${fmtInt(v)}</span>
+      <span class="text-sm font-mono font-black text-emerald-900">${fmtCompactNum(v)}</span>
     </div>`).join('') : '<span class="text-sm text-slate-400 italic">Sin datos disponibles para este filtro.</span>';
 }
 
@@ -710,31 +727,39 @@ function renderDona(){
   });
   const total = itabo+herrera+dependencias || 1;
 
-  document.getElementById('totalDependencias').innerText = fmtCurr(dependencias) + ' (' + fmtPct(dependencias/total*100) + ')';
+  const totalDepEl = document.getElementById('totalDependencias');
+  totalDepEl.innerText = fmtCompactCurr(dependencias) + ' (' + fmtPct(dependencias/total*100) + ')';
+  totalDepEl.title = 'Valor exacto: ' + fmtCurr(dependencias);
+  totalDepEl.classList.add('cursor-help');
   const lista = document.getElementById('listaDependencias');
   const entries = Object.entries(desglose).sort((a,b)=>b[1]-a[1]);
   lista.innerHTML = entries.length ? entries.map(([n,v])=>`
     <div class="flex justify-between items-center py-1 px-2.5 rounded-lg bg-slate-50 border border-slate-200">
       <span class="font-semibold text-slate-700">${n}</span>
-      <div class="text-right font-mono"><span class="text-amber-600 font-bold">${fmtCurr(v)}</span><span class="text-slate-500 text-[10px] ml-1">(${fmtPct(v/total*100)})</span></div>
+      <div class="text-right font-mono cursor-help" title="Valor exacto: ${fmtCurr(v)}"><span class="text-amber-600 font-bold">${fmtCompactCurr(v)}</span><span class="text-slate-500 text-[10px] ml-1">(${fmtPct(v/total*100)})</span></div>
     </div>`).join('') : '<div class="text-slate-500 italic py-1">Sin dependencias registradas.</div>';
 
   // Determinar qué porción (arco) de la dona corresponde al almacén seleccionado,
   // para "hacerla crecer" (offset hacia afuera) y mostrar su valor total.
   let offsets = [0, 0, 0];
   const infoEl = document.getElementById('donaSeleccionInfo');
+  infoEl.classList.add('cursor-help');
   if(almacenSel === 'TODOS'){
     infoEl.innerText = '';
+    infoEl.title = '';
   } else if(almacenSel.toLowerCase() === 'itabo'){
     offsets = [45, 0, 0];
-    infoEl.innerText = `Itabo: ${fmtCurr(itabo)} (${fmtPct(itabo/total*100)} del valor total)`;
+    infoEl.innerText = `Itabo: ${fmtCompactCurr(itabo)} (${fmtPct(itabo/total*100)} del valor total)`;
+    infoEl.title = 'Valor exacto: ' + fmtCurr(itabo);
   } else if(almacenSel.toLowerCase() === 'herrera'){
     offsets = [0, 45, 0];
-    infoEl.innerText = `Herrera: ${fmtCurr(herrera)} (${fmtPct(herrera/total*100)} del valor total)`;
+    infoEl.innerText = `Herrera: ${fmtCompactCurr(herrera)} (${fmtPct(herrera/total*100)} del valor total)`;
+    infoEl.title = 'Valor exacto: ' + fmtCurr(herrera);
   } else {
     offsets = [0, 0, 45];
     const valorAlm = valores[almacenSel] || 0;
-    infoEl.innerText = `${almacenSel}: ${fmtCurr(valorAlm)} (${fmtPct(valorAlm/total*100)} del valor total)`;
+    infoEl.innerText = `${almacenSel}: ${fmtCompactCurr(valorAlm)} (${fmtPct(valorAlm/total*100)} del valor total)`;
+    infoEl.title = 'Valor exacto: ' + fmtCurr(valorAlm);
   }
 
   if(charts.dona) charts.dona.destroy();
@@ -762,8 +787,10 @@ function renderVolumen(){
   charts.vol = new Chart(document.getElementById('chartVolumen').getContext('2d'), {
     type:'bar',
     data:{ labels, datasets:[{ label:'Unidades (Libre utilización)', data, backgroundColor:'rgba(16,185,129,.7)', borderColor:'#10b981', borderWidth:2, borderRadius:6 }]},
-    options:{ responsive:true, maintainAspectRatio:false, animation:{ duration:600, easing:'easeOutQuart' }, plugins:{legend:{display:false}},
-      scales:{ x:{grid:{color:'rgba(15,23,42,.08)'},ticks:{color:'#475569'}}, y:{grid:{color:'rgba(15,23,42,.08)'},ticks:{color:'#475569'},beginAtZero:true} } }
+    options:{ responsive:true, maintainAspectRatio:false, animation:{ duration:600, easing:'easeOutQuart' },
+      plugins:{ legend:{display:false}, tooltip:{ callbacks:{ label:c=>` ${fmtInt(c.raw)} unidades (exacto)` } } },
+      scales:{ x:{grid:{color:'rgba(15,23,42,.08)'},ticks:{color:'#475569'}},
+        y:{grid:{color:'rgba(15,23,42,.08)'},ticks:{color:'#475569', callback:v=>fmtCompactNum(v)},beginAtZero:true} } }
   });
 }
 
@@ -784,7 +811,8 @@ function renderMonetario(){
     data:{ labels, datasets:[{ label:'Valor (RD$)', data, backgroundColor:'rgba(59,130,246,.7)', borderColor:'#3b82f6', borderWidth:2, borderRadius:6 }]},
     options:{ responsive:true, maintainAspectRatio:false, animation:{ duration:600, easing:'easeOutQuart' },
       plugins:{ legend:{display:false}, tooltip:{ callbacks:{ label:c=>` ${fmtCurr(c.raw)} (${fmtPct(c.raw/total*100)} del total general)` } } },
-      scales:{ x:{grid:{color:'rgba(15,23,42,.08)'},ticks:{color:'#475569'}}, y:{grid:{color:'rgba(15,23,42,.08)'},ticks:{color:'#475569'},beginAtZero:true} } }
+      scales:{ x:{grid:{color:'rgba(15,23,42,.08)'},ticks:{color:'#475569'}},
+        y:{grid:{color:'rgba(15,23,42,.08)'},ticks:{color:'#475569', callback:v=>fmtCompactCurr(v)},beginAtZero:true} } }
   });
 }
 
