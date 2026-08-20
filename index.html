@@ -102,6 +102,9 @@ table tbody tr:hover{ background:var(--surface-sunk); }
       <span class="text-xs surface-sunk px-3 py-2 rounded-lg border border-token font-mono text-secondary flex items-center gap-1.5 justify-center whitespace-nowrap">
         <i class="fa-regular fa-calendar text-[11px]"></i> Período: <span class="font-bold" style="color:var(--blue)" id="rangoMeses">—</span>
       </span>
+      <span class="text-xs surface-sunk px-3 py-2 rounded-lg border border-token font-mono text-secondary flex items-center gap-1.5 justify-center whitespace-nowrap cursor-help" id="badgeActualizado" title="">
+        <i class="fa-solid fa-clock-rotate-left text-[11px]"></i> Actualizado: <span class="font-bold" style="color:var(--aqua)" id="fechaActualizacion">—</span>
+      </span>
     </div>
     <div id="resultadoBusqueda"></div>
     <div class="flex flex-wrap gap-2 items-center pt-0.5" id="botonesAlmacen">
@@ -423,6 +426,32 @@ let charts = {};
 let unidadPorCodigo = null;
 let precioPorCodigoCache = null;
 let saludCache = { deadStockValor:0, deadStockPct:0, dias:null, clause:'' };
+let almCodeMap = {};
+
+function buildAlmCodeMap(){
+  almCodeMap = {};
+  RAW.inventario.forEach(i=>{ if(i.alm && i.codAlm && !almCodeMap[i.alm]) almCodeMap[i.alm] = i.codAlm; });
+  RAW.movimientos.forEach(m=>{ if(m.alm && m.codAlm && !almCodeMap[m.alm]) almCodeMap[m.alm] = m.codAlm; });
+}
+function almLabel(nombre){
+  if(!nombre) return nombre;
+  const cod = almCodeMap[nombre];
+  return cod ? `${nombre} (${cod})` : nombre;
+}
+
+// Fecha de la última actualización de datos (día más reciente en que se generó/cargó
+// el data.json) — no es el período de movimientos, sino cuándo se refrescó la fuente.
+let ultimaActualizacion = null;
+function fmtFechaActualizacion(ms){
+  if(!ms) return '—';
+  const d = new Date(ms);
+  return new Intl.DateTimeFormat('es-DO', { day:'numeric', month:'short', year:'numeric' }).format(d);
+}
+function fmtFechaActualizacionCompleta(ms){
+  if(!ms) return '';
+  const d = new Date(ms);
+  return new Intl.DateTimeFormat('es-DO', { day:'numeric', month:'long', year:'numeric', hour:'numeric', minute:'2-digit' }).format(d);
+}
 
 function norm(v){ if(v===null||v===undefined) return ''; return String(v).replace(/ /g,'').trim(); }
 
@@ -498,19 +527,36 @@ function seleccionarSugerencia(cod){
 
 function renderFichaMaterial(filas, cont){
   const { cod, desc } = filas[0];
-  const totalCant = filas.reduce((a,f)=>a+f.cant,0);
-  const totalValor = filas.reduce((a,f)=>a+f.valor,0);
+  // Solo se listan los almacenes donde el material tiene existencia > 0 — un
+  // almacén en cero no debe figurar en la ficha (ver nota de "ocultos" abajo).
   const disponibles = filas.filter(f=>f.cant>0);
+  const ocultos = filas.length - disponibles.length;
+  const totalCant = disponibles.reduce((a,f)=>a+f.cant,0);
+  const totalValor = disponibles.reduce((a,f)=>a+f.valor,0);
 
-  const filasHtml = filas.map(f => `
+  const filasHtml = disponibles.map(f => `
     <tr>
-      <td class="p-2.5 font-semibold">${f.alm}</td>
-      <td class="p-2.5 text-right font-mono tabular ${f.cant>0 ? 'font-bold' : 'text-muted'}" style="${f.cant>0?`color:var(--good)`:''}">${fmtInt(f.cant)} ${f.uni}</td>
+      <td class="p-2.5 font-semibold">${almLabel(f.alm)}</td>
+      <td class="p-2.5 text-right font-mono tabular font-bold" style="color:var(--good)">${fmtInt(f.cant)} ${f.uni}</td>
       <td class="p-2.5 text-right font-mono tabular text-secondary">${fmtCurr(f.valor)}</td>
-      <td class="p-2.5 text-center">${f.cant>0
-        ? '<span class="text-[10px] px-2 py-0.5 rounded-full font-bold" style="background:var(--good-bg);color:var(--good)">DISPONIBLE</span>'
-        : '<span class="text-[10px] px-2 py-0.5 rounded-full font-bold" style="background:var(--critical-bg);color:var(--critical)">SIN STOCK</span>'}</td>
     </tr>`).join('');
+
+  const tablaHtml = disponibles.length ? `
+      <table class="w-full text-left border-collapse text-xs">
+        <thead class="surface-2 uppercase font-bold border-b border-token">
+          <tr><th class="p-2.5">Almacén</th><th class="p-2.5 text-right">Cantidad</th><th class="p-2.5 text-right">Valor (RD$)</th></tr>
+        </thead>
+        <tbody class="divide-y" style="border-color:var(--border)">${filasHtml}</tbody>
+        <tfoot>
+          <tr class="surface-2 font-bold">
+            <td class="p-2.5">TOTAL</td>
+            <td class="p-2.5 text-right font-mono tabular" style="color:var(--good)">${fmtInt(totalCant)}</td>
+            <td class="p-2.5 text-right font-mono tabular">${fmtCurr(totalValor)}</td>
+          </tr>
+        </tfoot>
+      </table>
+      ${ocultos>0 ? `<p class="text-[10px] text-muted italic px-2.5 py-2">Se ${ocultos===1?'oculta 1 almacén':'ocultan '+ocultos+' almacenes'} sin existencia de este material.</p>` : ''}
+    ` : `<p class="p-4 text-xs text-secondary italic">Este material no tiene existencia disponible en ningún almacén actualmente.</p>`;
 
   cont.innerHTML = `
     <div class="mt-1 rounded-xl border border-token surface-sunk overflow-hidden">
@@ -523,20 +569,7 @@ function renderFichaMaterial(filas, cont){
           ${disponibles.length ? `Disponible en ${disponibles.length} de ${filas.length} almacén(es)` : 'Sin existencia en ningún almacén'}
         </span>
       </div>
-      <table class="w-full text-left border-collapse text-xs">
-        <thead class="surface-2 uppercase font-bold border-b border-token">
-          <tr><th class="p-2.5">Almacén</th><th class="p-2.5 text-right">Cantidad</th><th class="p-2.5 text-right">Valor (RD$)</th><th class="p-2.5 text-center">Estado</th></tr>
-        </thead>
-        <tbody class="divide-y" style="border-color:var(--border)">${filasHtml}</tbody>
-        <tfoot>
-          <tr class="surface-2 font-bold">
-            <td class="p-2.5">TOTAL</td>
-            <td class="p-2.5 text-right font-mono tabular" style="color:var(--good)">${fmtInt(totalCant)}</td>
-            <td class="p-2.5 text-right font-mono tabular">${fmtCurr(totalValor)}</td>
-            <td class="p-2.5"></td>
-          </tr>
-        </tfoot>
-      </table>
+      ${tablaHtml}
     </div>
   `;
 }
@@ -560,6 +593,7 @@ async function cargarDatosCompartidos(){
     if(!resp.ok) throw new Error('HTTP ' + resp.status);
     const parsed = await resp.json();
     RAW = { inventario: parsed.inventario || [], movimientos: parsed.movimientos || parsed.movimientos201 || [] };
+    ultimaActualizacion = parsed.actualizado || null;
     initBotones();
     render();
     setEstado('Datos cargados desde data.json', 'emerald');
@@ -659,18 +693,24 @@ function procesarBuffer(buffer){
   RAW = { inventario, movimientos };
   unidadPorCodigo = null;
   precioPorCodigoCache = null;
+  ultimaActualizacion = Date.now();
   initBotones();
   render();
 }
 
 function warehouseList(){
+  // Solo almacenes con existencia neta > 0 — un almacén en cero no aparece como
+  // seleccionable (aunque tenga histórico de movimientos).
+  const stockPorAlm = {};
+  RAW.inventario.forEach(i=>{ stockPorAlm[i.alm] = (stockPorAlm[i.alm]||0) + i.cant; });
   const set = new Set();
   RAW.inventario.forEach(i=>set.add(i.alm));
   RAW.movimientos.forEach(m=>set.add(m.alm));
-  return Array.from(set).filter(Boolean).sort();
+  return Array.from(set).filter(Boolean).filter(nombre => (stockPorAlm[nombre]||0) > 0).sort();
 }
 
 function initBotones(){
+  buildAlmCodeMap();
   const cont = document.getElementById('botonesAlmacen');
   cont.innerHTML = '';
   const btnTodos = document.createElement('button');
@@ -682,7 +722,7 @@ function initBotones(){
   warehouseList().forEach(nombre=>{
     const b = document.createElement('button');
     b.className = 'btn-alm chip px-3.5 py-2 rounded-xl text-xs font-bold transition-all';
-    b.innerHTML = '<i class="fa-solid fa-warehouse mr-1.5 text-muted"></i> ' + nombre.toUpperCase();
+    b.innerHTML = '<i class="fa-solid fa-warehouse mr-1.5 text-muted"></i> ' + almLabel(nombre).toUpperCase();
     b.onclick = ()=>seleccionar(nombre, b);
     cont.appendChild(b);
   });
@@ -690,6 +730,11 @@ function initBotones(){
   const anios2026 = RAW.movimientos.filter(m=>m.anio===2026).map(m=>m.mes);
   const mArr = Array.from(new Set(anios2026)).sort((a,b)=>a-b);
   document.getElementById('rangoMeses').innerText = mArr.length ? (MESES[mArr[0]] + ' – ' + MESES[mArr[mArr.length-1]] + ' 2026') : '—';
+
+  const fechaEl = document.getElementById('fechaActualizacion');
+  const badgeEl = document.getElementById('badgeActualizado');
+  fechaEl.innerText = fmtFechaActualizacion(ultimaActualizacion);
+  badgeEl.title = ultimaActualizacion ? 'Última actualización: ' + fmtFechaActualizacionCompleta(ultimaActualizacion) : 'Sin información de actualización';
 }
 
 function seleccionar(nombre, btn){
@@ -821,9 +866,9 @@ function renderInsightBanner(valorSel, valorGlobal){
     RAW.inventario.forEach(i=>{ valores[i.alm]=(valores[i.alm]||0)+i.valor; });
     const entries = Object.entries(valores).sort((a,b)=>b[1]-a[1]);
     const [topNombre, topValor] = entries[0] || ['—',0];
-    frase = `La red de almacenes ETED gestiona <b>${fmtCompactCurr(valorSel)}</b> en inventario. <b>${topNombre}</b> concentra el ${fmtPct(topValor/valorGlobal*100)} del valor total.`;
+    frase = `La red de almacenes ETED gestiona <b>${fmtCompactCurr(valorSel)}</b> en inventario. <b>${almLabel(topNombre)}</b> concentra el ${fmtPct(topValor/valorGlobal*100)} del valor total.`;
   } else {
-    frase = `Estás viendo <b>${almacenSel}</b>: ${fmtCompactCurr(valorSel)} (${fmtPct(valorSel/valorGlobal*100)} del total de la red).`;
+    frase = `Estás viendo <b>${almLabel(almacenSel)}</b>: ${fmtCompactCurr(valorSel)} (${fmtPct(valorSel/valorGlobal*100)} del total de la red).`;
   }
   el.innerHTML = frase + ' ' + saludCache.clause;
 }
@@ -921,10 +966,11 @@ function renderDona(){
   const c = C();
   const valores = aggValorPorAlmacen();
   let itabo=0, herrera=0, dependencias=0; const desglose={};
+  let itaboNombre='Itabo', herreraNombre='Herrera';
   Object.entries(valores).forEach(([nombre,val])=>{
     const low = nombre.toLowerCase();
-    if(low==='itabo') itabo+=val;
-    else if(low==='herrera') herrera+=val;
+    if(low==='itabo'){ itabo+=val; itaboNombre=nombre; }
+    else if(low==='herrera'){ herrera+=val; herreraNombre=nombre; }
     else { dependencias+=val; desglose[nombre]=(desglose[nombre]||0)+val; }
   });
   const total = itabo+herrera+dependencias || 1;
@@ -937,7 +983,7 @@ function renderDona(){
   const entries = Object.entries(desglose).sort((a,b)=>b[1]-a[1]);
   lista.innerHTML = entries.length ? entries.map(([n,v])=>`
     <div class="flex justify-between items-center py-1 px-2.5 rounded-lg surface-sunk border border-token">
-      <span class="font-semibold text-secondary">${n}</span>
+      <span class="font-semibold text-secondary">${almLabel(n)}</span>
       <div class="text-right font-mono tabular cursor-help" title="Valor exacto: ${fmtCurr(v)}"><span class="font-bold" style="color:var(--orange)">${fmtCompactCurr(v)}</span><span class="text-muted text-[10px] ml-1">(${fmtPct(v/total*100)})</span></div>
     </div>`).join('') : '<div class="text-muted italic py-1">Sin dependencias registradas.</div>';
 
@@ -948,23 +994,23 @@ function renderDona(){
     infoEl.innerText = ''; infoEl.title = '';
   } else if(almacenSel.toLowerCase() === 'itabo'){
     offsets = [45, 0, 0];
-    infoEl.innerText = `Itabo: ${fmtCompactCurr(itabo)} (${fmtPct(itabo/total*100)} del valor total)`;
+    infoEl.innerText = `${almLabel(itaboNombre)}: ${fmtCompactCurr(itabo)} (${fmtPct(itabo/total*100)} del valor total)`;
     infoEl.title = 'Valor exacto: ' + fmtCurr(itabo);
   } else if(almacenSel.toLowerCase() === 'herrera'){
     offsets = [0, 45, 0];
-    infoEl.innerText = `Herrera: ${fmtCompactCurr(herrera)} (${fmtPct(herrera/total*100)} del valor total)`;
+    infoEl.innerText = `${almLabel(herreraNombre)}: ${fmtCompactCurr(herrera)} (${fmtPct(herrera/total*100)} del valor total)`;
     infoEl.title = 'Valor exacto: ' + fmtCurr(herrera);
   } else {
     offsets = [0, 0, 45];
     const valorAlm = valores[almacenSel] || 0;
-    infoEl.innerText = `${almacenSel}: ${fmtCompactCurr(valorAlm)} (${fmtPct(valorAlm/total*100)} del valor total)`;
+    infoEl.innerText = `${almLabel(almacenSel)}: ${fmtCompactCurr(valorAlm)} (${fmtPct(valorAlm/total*100)} del valor total)`;
     infoEl.title = 'Valor exacto: ' + fmtCurr(valorAlm);
   }
 
   if(charts.dona) charts.dona.destroy();
   charts.dona = new Chart(document.getElementById('chartDona').getContext('2d'), {
     type:'doughnut',
-    data:{ labels:['Itabo','Herrera','Dependencias (consolidado)'], datasets:[{ data:[itabo,herrera,dependencias], backgroundColor:[c.blue,c.orange,c.aqua], borderColor:c.surface, borderWidth:3, offset:offsets }]},
+    data:{ labels:[almLabel(itaboNombre),almLabel(herreraNombre),'Dependencias (consolidado)'], datasets:[{ data:[itabo,herrera,dependencias], backgroundColor:[c.blue,c.orange,c.aqua], borderColor:c.surface, borderWidth:3, offset:offsets }]},
     options:{ responsive:true, maintainAspectRatio:false, animation:{ animateRotate:true, animateScale:true, duration:700, easing:'easeOutQuart' },
       plugins:{ legend:{position:'bottom', labels:{color:c.textSecondary,font:{size:11,weight:'bold'},usePointStyle:true,pointStyle:'circle'}},
         tooltip:{ backgroundColor:c.surface, titleColor:c.textPrimary, bodyColor:c.textSecondary, borderColor:c.grid, borderWidth:1, padding:10,
@@ -977,8 +1023,8 @@ function renderVolumen(){
   const c = C();
   const map = aggVolPorAlmacen();
   let labels, data;
-  if(almacenSel === 'TODOS'){ labels = Object.keys(map); data = Object.values(map); }
-  else { labels = [almacenSel]; data = [map[almacenSel] || 0]; }
+  if(almacenSel === 'TODOS'){ labels = Object.keys(map).map(almLabel); data = Object.values(map); }
+  else { labels = [almLabel(almacenSel)]; data = [map[almacenSel] || 0]; }
   if(charts.vol) charts.vol.destroy();
   charts.vol = new Chart(document.getElementById('chartVolumen').getContext('2d'), {
     type:'bar',
@@ -995,8 +1041,8 @@ function renderMonetario(){
   const map = aggValorPorAlmacen();
   const total = Object.values(map).reduce((a,b)=>a+b,0) || 1;
   let labels, data;
-  if(almacenSel === 'TODOS'){ labels = Object.keys(map); data = Object.values(map); }
-  else { labels = [almacenSel]; data = [map[almacenSel] || 0]; }
+  if(almacenSel === 'TODOS'){ labels = Object.keys(map).map(almLabel); data = Object.values(map); }
+  else { labels = [almLabel(almacenSel)]; data = [map[almacenSel] || 0]; }
   if(charts.mon) charts.mon.destroy();
   charts.mon = new Chart(document.getElementById('chartMonetario').getContext('2d'), {
     type:'bar',
