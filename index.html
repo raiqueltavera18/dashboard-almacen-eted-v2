@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ETED - Dirección Administrativa | Gerencia de Almacenes</title>
+<title>ETED - Gerencia de Almacén</title>
 <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
@@ -62,17 +62,30 @@ table tbody tr:hover{ background:var(--surface-sunk); }
 .badge-dot{ width:.5rem; height:.5rem; border-radius:999px; display:inline-block; }
 .skeleton{ background:linear-gradient(90deg,var(--surface-2) 25%,var(--surface-sunk) 37%,var(--surface-2) 63%); background-size:400% 100%; animation:sk 1.4s ease infinite; }
 @keyframes sk{ 0%{background-position:100% 50%} 100%{background-position:0 50%} }
+
+/* ============================================================
+   MODO PROYECCIÓN — pantallas grandes (1920×1080 y superiores).
+   Tailwind usa rem para tipografía y espaciados: al subir el
+   font-size raíz, todo el sistema (texto, padding, gaps, radios)
+   escala en conjunto sin tocar cada clase una por una. Solo los
+   altos de gráfica (px fijos) y el tamaño de fuente de Chart.js
+   (renderizado en canvas, ajeno al CSS) se ajustan aparte — ver
+   las variantes min-[1800px]: en el HTML y chartFontSize() en JS.
+   ============================================================ */
+@media (min-width: 1800px){
+  html{ font-size: 18.5px; }
+}
 </style>
 </head>
 <body class="font-sans antialiased min-h-screen pb-16">
 
 <!-- ============== HEADER (identidad de marca, no fijo) ============== -->
-<header class="p-5" style="background:linear-gradient(120deg,var(--brand-navy-1),var(--brand-navy-2)); border-bottom:3px solid var(--brand-accent);">
-  <div class="max-w-[1500px] mx-auto flex flex-col md:flex-row justify-between items-center gap-4">
+<header class="p-5 min-[1800px]:py-3" style="background:linear-gradient(120deg,var(--brand-navy-1),var(--brand-navy-2)); border-bottom:3px solid var(--brand-accent);">
+  <div class="max-w-[1500px] min-[1800px]:max-w-[1820px] mx-auto flex flex-col md:flex-row justify-between items-center gap-4">
     <div class="flex items-center space-x-4">
       <div class="bg-white text-blue-950 px-4 py-2 rounded-lg font-black tracking-tighter text-xl shadow-lg border border-white/40">ETED</div>
       <div>
-        <h1 class="text-xl md:text-2xl font-black tracking-wide text-white">DIRECCIÓN ADMINISTRATIVA</h1>
+        <h1 class="text-xl md:text-2xl font-black tracking-wide text-white">GERENCIA DE ALMACÉN</h1>
         <p class="text-xs text-blue-200 font-bold tracking-widest uppercase mt-0.5">Dashboard General de Almacenes ETED</p>
       </div>
     </div>
@@ -83,6 +96,9 @@ table tbody tr:hover{ background:var(--surface-sunk); }
       <button onclick="toggleTheme()" title="Modo sala de juntas / claro" class="text-blue-200 hover:text-white transition-colors w-9 h-9 flex items-center justify-center rounded-lg hover:bg-white/10">
         <i class="fa-solid fa-moon text-sm" id="iconTheme"></i>
       </button>
+      <button onclick="onClickLockToggle()" title="Mostrar/ocultar información de almacén" class="text-blue-200 hover:text-white transition-colors w-9 h-9 flex items-center justify-center rounded-lg hover:bg-white/10">
+        <i class="fa-solid fa-lock text-sm" id="iconLock"></i>
+      </button>
       <button onclick="toggleAdminPanel()" title="Panel de actualización de datos" class="text-blue-200 hover:text-white transition-colors w-9 h-9 flex items-center justify-center rounded-lg hover:bg-white/10">
         <i class="fa-solid fa-gear text-sm"></i>
       </button>
@@ -92,28 +108,30 @@ table tbody tr:hover{ background:var(--surface-sunk); }
 
 <!-- ============== TOOLBAR FIJA: búsqueda + almacenes (siempre visible, sin clics extra) ============== -->
 <div class="sticky top-0 z-40 border-b border-token" style="background:color-mix(in oklab, var(--surface) 92%, transparent); backdrop-filter:blur(8px);">
-  <div class="max-w-[1500px] mx-auto px-4 sm:px-6 lg:px-8 py-3 space-y-2.5">
+  <div class="max-w-[1500px] min-[1800px]:max-w-[1820px] mx-auto px-4 sm:px-6 lg:px-8 py-3 min-[1800px]:py-2 space-y-2.5 min-[1800px]:space-y-2">
     <div class="flex flex-col lg:flex-row lg:items-center gap-2.5">
       <div class="relative flex-1 min-w-[240px]">
         <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-sm text-muted"></i>
         <input type="text" id="inputBuscador" oninput="onBuscarInput()" placeholder="Buscar material por código o descripción — ej: 1608540 o AISLADOR" autocomplete="off"
           class="w-full surface-sunk border border-token rounded-xl pl-10 pr-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/40 transition-colors" style="color:var(--text-primary)">
       </div>
-      <span class="text-xs surface-sunk px-3 py-2 rounded-lg border border-token font-mono text-secondary flex items-center gap-1.5 justify-center whitespace-nowrap">
-        <i class="fa-regular fa-calendar text-[11px]"></i> Período: <span class="font-bold" style="color:var(--blue)" id="rangoMeses">—</span>
-      </span>
-      <span class="text-xs surface-sunk px-3 py-2 rounded-lg border border-token font-mono text-secondary flex items-center gap-1.5 justify-center whitespace-nowrap cursor-help" id="badgeActualizado" title="">
-        <i class="fa-solid fa-clock-rotate-left text-[11px]"></i> Actualizado: <span class="font-bold" style="color:var(--aqua)" id="fechaActualizacion">—</span>
-      </span>
+      <div id="badgesInfo" class="hidden flex flex-wrap items-center gap-2.5">
+        <span class="text-xs surface-sunk px-3 py-2 rounded-lg border border-token font-mono text-secondary flex items-center gap-1.5 justify-center whitespace-nowrap">
+          <i class="fa-regular fa-calendar text-[11px]"></i> Período: <span class="font-bold" style="color:var(--blue)" id="rangoMeses">—</span>
+        </span>
+        <span class="text-xs surface-sunk px-3 py-2 rounded-lg border border-token font-mono text-secondary flex items-center gap-1.5 justify-center whitespace-nowrap cursor-help" id="badgeActualizado" title="">
+          <i class="fa-solid fa-clock-rotate-left text-[11px]"></i> Actualizado: <span class="font-bold" style="color:var(--aqua)" id="fechaActualizacion">—</span>
+        </span>
+      </div>
     </div>
     <div id="resultadoBusqueda"></div>
-    <div class="flex flex-wrap gap-2 items-center pt-0.5" id="botonesAlmacen">
+    <div class="hidden flex flex-wrap gap-2 items-center pt-0.5" id="botonesAlmacen">
       <span class="text-xs text-muted italic">Carga un archivo para ver los almacenes disponibles.</span>
     </div>
   </div>
 </div>
 
-<main class="px-4 sm:px-6 lg:px-8 py-5 md:py-6 max-w-[1500px] mx-auto space-y-6">
+<main class="px-4 sm:px-6 lg:px-8 py-5 md:py-6 min-[1800px]:py-3 max-w-[1500px] min-[1800px]:max-w-[1820px] mx-auto space-y-6 min-[1800px]:space-y-4">
 
   <section id="avisoConfig" class="hidden card p-4 text-xs space-y-3">
     <div class="flex items-start gap-3">
@@ -133,6 +151,10 @@ table tbody tr:hover{ background:var(--surface-sunk); }
       </a>
     </div>
   </section>
+
+  <!-- ============== PANEL PROTEGIDO: gráficos, KPI y datos monetarios — oculto por
+       defecto, requiere contraseña (botón de candado en el header) ============== -->
+  <div id="panelProtegido" class="hidden space-y-6 min-[1800px]:space-y-4">
 
   <!-- ============== BANNER EJECUTIVO: insight automático de una línea ============== -->
   <section id="insightWrap" class="hidden rounded-2xl p-4 flex items-start gap-3" style="background:linear-gradient(90deg, color-mix(in oklab, var(--blue) 10%, transparent), color-mix(in oklab, var(--blue) 3%, transparent)); border:1px solid color-mix(in oklab, var(--blue) 25%, transparent);">
@@ -215,14 +237,14 @@ table tbody tr:hover{ background:var(--surface-sunk); }
         <h2 class="text-base font-extrabold tracking-wide flex items-center gap-2"><i class="fa-solid fa-chart-column" style="color:var(--blue)"></i> Movimientos Mensuales: Entradas (101) vs Salidas (201)</h2>
         <p class="text-xs text-secondary mt-0.5">Documentos únicos por mes (no posiciones/líneas repetidas).</p>
       </div>
-      <div class="relative h-[400px]"><canvas id="chartSalidas"></canvas></div>
+      <div class="relative h-[400px] min-[1800px]:h-[420px]"><canvas id="chartSalidas"></canvas></div>
     </div>
     <div class="card p-6 space-y-4">
       <div class="border-b pb-3" style="border-color:var(--border)">
         <h2 class="text-base font-extrabold tracking-wide flex items-center gap-2"><i class="fa-solid fa-arrows-turn-to-dots" style="color:var(--violet)"></i> Otros Movimientos</h2>
         <p class="text-xs text-secondary mt-0.5">Traslados, anulaciones y otras clases, por mes.</p>
       </div>
-      <div class="relative h-[400px]"><canvas id="chartOtros"></canvas></div>
+      <div class="relative h-[400px] min-[1800px]:h-[420px]"><canvas id="chartOtros"></canvas></div>
     </div>
   </section>
   </div>
@@ -236,14 +258,14 @@ table tbody tr:hover{ background:var(--surface-sunk); }
           <p class="text-xs text-secondary mt-0.5">Itabo y Herrera vs. resto consolidado como Dependencia.</p>
         </div>
         <p id="donaSeleccionInfo" class="text-center text-sm font-bold mb-1 min-h-[20px]" style="color:var(--blue)"></p>
-        <div class="relative h-80 flex items-center justify-center"><canvas id="chartDona"></canvas></div>
+        <div class="relative h-80 min-[1800px]:h-[360px] flex items-center justify-center"><canvas id="chartDona"></canvas></div>
       </div>
       <div class="mt-4 pt-4 border-t space-y-2" style="border-color:var(--border)">
         <h3 class="text-xs font-bold uppercase tracking-wider flex justify-between items-center" style="color:var(--orange)">
           <span><i class="fa-solid fa-sitemap mr-1"></i> Detalle de Dependencias:</span>
           <span id="totalDependencias" class="text-secondary font-mono font-bold">RD$ 0.00</span>
         </h3>
-        <div class="max-h-48 overflow-y-auto pr-1 space-y-1.5 custom-scrollbar text-xs" id="listaDependencias"></div>
+        <div class="max-h-48 min-[1800px]:max-h-64 overflow-y-auto pr-1 space-y-1.5 custom-scrollbar text-xs" id="listaDependencias"></div>
       </div>
     </div>
 
@@ -253,11 +275,11 @@ table tbody tr:hover{ background:var(--surface-sunk); }
           <h2 class="text-base font-extrabold tracking-wide flex items-center gap-2"><i class="fa-solid fa-chart-column" style="color:var(--aqua)"></i> Volumen Físico por Almacén (unidades)</h2>
           <p class="text-xs text-secondary mt-0.5">Cantidad total de existencia por almacén (todas las unidades de medida combinadas).</p>
         </div>
-        <div class="relative h-80"><canvas id="chartVolumen"></canvas></div>
+        <div class="relative h-80 min-[1800px]:h-[360px]"><canvas id="chartVolumen"></canvas></div>
       </div>
       <div class="pt-4 border-t" style="border-color:var(--border)">
         <h3 class="text-xs font-bold uppercase tracking-wider mb-2 flex items-center gap-1.5" style="color:var(--blue)"><i class="fa-solid fa-coins"></i> Valor Monetario (RD$) y % por Almacén</h3>
-        <div class="relative h-52"><canvas id="chartMonetario"></canvas></div>
+        <div class="relative h-52 min-[1800px]:h-56"><canvas id="chartMonetario"></canvas></div>
       </div>
     </div>
   </section>
@@ -282,7 +304,7 @@ table tbody tr:hover{ background:var(--surface-sunk); }
           <div class="w-8 h-8 rounded-lg flex items-center justify-center" style="background:color-mix(in oklab, var(--yellow) 18%, transparent); color:var(--yellow)"><i class="fa-solid fa-fire text-xs"></i></div>
           <h3 class="text-xs font-extrabold uppercase tracking-wider">Top 10 Mayor Rotación (Entradas 101 + Salidas 201)</h3>
         </div>
-        <div class="overflow-x-auto max-h-[560px] overflow-y-auto custom-scrollbar">
+        <div class="overflow-x-auto max-h-[560px] min-[1800px]:max-h-[680px] overflow-y-auto custom-scrollbar">
           <table class="w-full text-left border-collapse text-xs">
             <thead class="surface-sunk sticky top-0 uppercase font-bold border-b" style="border-color:var(--border)">
               <tr><th class="p-3">#</th><th class="p-3">Código</th><th class="p-3">Descripción</th><th class="p-3 text-right">Mov. (101+201)</th></tr>
@@ -297,7 +319,7 @@ table tbody tr:hover{ background:var(--surface-sunk); }
           <div class="w-8 h-8 rounded-lg flex items-center justify-center" style="background:color-mix(in oklab, var(--blue) 16%, transparent); color:var(--blue)"><i class="fa-solid fa-sack-dollar text-xs"></i></div>
           <h3 class="text-xs font-extrabold uppercase tracking-wider">Top 10 Mayor Valor Monetario</h3>
         </div>
-        <div class="overflow-x-auto max-h-[560px] overflow-y-auto custom-scrollbar">
+        <div class="overflow-x-auto max-h-[560px] min-[1800px]:max-h-[680px] overflow-y-auto custom-scrollbar">
           <table class="w-full text-left border-collapse text-xs">
             <thead class="surface-sunk sticky top-0 uppercase font-bold border-b" style="border-color:var(--border)">
               <tr><th class="p-3">#</th><th class="p-3">Código</th><th class="p-3">Descripción</th><th class="p-3 text-right">Valor (RD$)</th></tr>
@@ -312,7 +334,7 @@ table tbody tr:hover{ background:var(--surface-sunk); }
           <div class="w-8 h-8 rounded-lg flex items-center justify-center" style="background:color-mix(in oklab, var(--aqua) 16%, transparent); color:var(--aqua)"><i class="fa-solid fa-cubes text-xs"></i></div>
           <h3 class="text-xs font-extrabold uppercase tracking-wider">Top 10 Mayor Volumen Físico</h3>
         </div>
-        <div class="overflow-x-auto max-h-[560px] overflow-y-auto custom-scrollbar">
+        <div class="overflow-x-auto max-h-[560px] min-[1800px]:max-h-[680px] overflow-y-auto custom-scrollbar">
           <table class="w-full text-left border-collapse text-xs">
             <thead class="surface-sunk sticky top-0 uppercase font-bold border-b" style="border-color:var(--border)">
               <tr><th class="p-3">#</th><th class="p-3">Código</th><th class="p-3">Descripción</th><th class="p-3 text-right">Volumen</th></tr>
@@ -327,7 +349,7 @@ table tbody tr:hover{ background:var(--surface-sunk); }
           <div class="w-8 h-8 rounded-lg flex items-center justify-center" style="background:var(--critical-bg); color:var(--critical)"><i class="fa-solid fa-triangle-exclamation text-xs"></i></div>
           <h3 class="text-xs font-extrabold uppercase tracking-wider">Top 10 Menor Volumen Físico (&gt; 0)</h3>
         </div>
-        <div class="overflow-x-auto max-h-[560px] overflow-y-auto custom-scrollbar">
+        <div class="overflow-x-auto max-h-[560px] min-[1800px]:max-h-[680px] overflow-y-auto custom-scrollbar">
           <table class="w-full text-left border-collapse text-xs">
             <thead class="surface-sunk sticky top-0 uppercase font-bold border-b" style="border-color:var(--border)">
               <tr><th class="p-3">#</th><th class="p-3">Código</th><th class="p-3">Descripción</th><th class="p-3 text-right">Volumen</th></tr>
@@ -347,14 +369,14 @@ table tbody tr:hover{ background:var(--surface-sunk); }
         <h2 class="text-base font-extrabold tracking-wide flex items-center gap-2"><i class="fa-solid fa-cubes" style="color:var(--aqua)"></i> Cantidad por Familia de Material</h2>
         <p class="text-xs text-secondary mt-0.5">Suma de existencia por familia (todas las unidades de medida combinadas).</p>
       </div>
-      <div class="relative h-96"><canvas id="chartFamiliaCantidad"></canvas></div>
+      <div class="relative h-96 min-[1800px]:h-[410px]"><canvas id="chartFamiliaCantidad"></canvas></div>
     </div>
     <div class="card p-6 space-y-4">
       <div class="border-b pb-3" style="border-color:var(--border)">
         <h2 class="text-base font-extrabold tracking-wide flex items-center gap-2"><i class="fa-solid fa-sack-dollar" style="color:var(--blue)"></i> Valor por Familia de Material (RD$)</h2>
         <p class="text-xs text-secondary mt-0.5">Suma del valor de existencia por familia.</p>
       </div>
-      <div class="relative h-96"><canvas id="chartFamiliaValor"></canvas></div>
+      <div class="relative h-96 min-[1800px]:h-[410px]"><canvas id="chartFamiliaValor"></canvas></div>
     </div>
   </section>
 
@@ -364,12 +386,37 @@ table tbody tr:hover{ background:var(--surface-sunk); }
       <p class="text-xs text-secondary mt-0.5">Proporción de materiales distintos catalogados en cada familia (top 7 + "Otras"), dentro de la selección actual.</p>
     </div>
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 items-center">
-      <div class="relative h-96"><canvas id="chartFamiliaDona"></canvas></div>
-      <div class="max-h-96 overflow-y-auto pr-1 space-y-1.5 custom-scrollbar text-xs" id="listaFamilias"></div>
+      <div class="relative h-96 min-[1800px]:h-[410px]"><canvas id="chartFamiliaDona"></canvas></div>
+      <div class="max-h-96 min-[1800px]:max-h-[440px] overflow-y-auto pr-1 space-y-1.5 custom-scrollbar text-xs" id="listaFamilias"></div>
     </div>
   </section>
   </div>
+
+  </div><!-- /panelProtegido -->
 </main>
+
+<!-- ============== MODAL: contraseña para mostrar información de almacén ============== -->
+<div id="modalPasswordOverlay" class="hidden fixed inset-0 z-[100] flex items-center justify-center p-4" style="background:rgba(8,10,20,.6)" onclick="if(event.target===this) cerrarModalPassword()">
+  <div class="card p-6 w-full max-w-sm">
+    <div class="flex items-center gap-3 mb-4">
+      <div class="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0" style="background:color-mix(in oklab, var(--blue) 16%, transparent); color:var(--blue)">
+        <i class="fa-solid fa-lock"></i>
+      </div>
+      <div>
+        <h3 class="font-extrabold text-sm">Información de almacén protegida</h3>
+        <p class="text-xs text-secondary">Ingresa la contraseña para mostrarla.</p>
+      </div>
+    </div>
+    <input type="password" id="inputPassword" placeholder="Contraseña" autocomplete="off"
+      class="w-full surface-sunk border border-token rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/40" style="color:var(--text-primary)"
+      onkeydown="if(event.key==='Enter'){ intentarDesbloquear(); } else if(event.key==='Escape'){ cerrarModalPassword(); }">
+    <p id="passwordError" class="hidden text-xs mt-2 font-semibold" style="color:var(--critical)"><i class="fa-solid fa-triangle-exclamation mr-1"></i>Contraseña incorrecta. Intenta de nuevo.</p>
+    <div class="flex gap-2 mt-4">
+      <button onclick="cerrarModalPassword()" class="flex-1 text-xs font-bold py-2.5 rounded-lg surface-sunk border border-token hover:opacity-80 transition-opacity">Cancelar</button>
+      <button onclick="intentarDesbloquear()" class="flex-1 text-xs font-bold py-2.5 rounded-lg text-white transition-opacity hover:opacity-90" style="background:var(--blue)">Ingresar</button>
+    </div>
+  </div>
+</div>
 
 <script>
 const ALMACEN_MAP_FALLBACK = {
@@ -401,13 +448,19 @@ const MESES = {1:'Ene',2:'Feb',3:'Mar',4:'Abr',5:'May',6:'Jun',7:'Jul',8:'Ago',9
 
 // ---- Sistema de color (paleta validada — ver dataviz color-formula) ----
 function cssVar(name){ return getComputedStyle(document.documentElement).getPropertyValue(name).trim(); }
+// Chart.js dibuja su texto (ejes, leyendas, tooltips) en canvas, ajeno al CSS/rem
+// de la página — se escala aparte para pantallas de proyección ≥1800px de ancho.
+function chartFontSize(){ return window.innerWidth >= 1800 ? 14 : 12; }
+function chartFontSizeSm(){ return window.innerWidth >= 1800 ? 13 : 11; }
+
 function C(){
   return {
     blue: cssVar('--blue'), orange: cssVar('--orange'), aqua: cssVar('--aqua'), yellow: cssVar('--yellow'),
     magenta: cssVar('--magenta'), green: cssVar('--green'), violet: cssVar('--violet'), red: cssVar('--red'),
     good: cssVar('--good'), warning: cssVar('--warning'), serious: cssVar('--serious'), critical: cssVar('--critical'),
     grid: cssVar('--grid'), baseline: cssVar('--baseline'), textSecondary: cssVar('--text-secondary'),
-    textMuted: cssVar('--text-muted'), surface: cssVar('--surface'), textPrimary: cssVar('--text-primary')
+    textMuted: cssVar('--text-muted'), surface: cssVar('--surface'), textPrimary: cssVar('--text-primary'),
+    fs: chartFontSize(), fsSm: chartFontSizeSm()
   };
 }
 // Orden fijo categórico (8 tonos validados, nunca reordenado ni ciclado más allá de 8)
@@ -464,6 +517,21 @@ function toggleTheme(){
   if(RAW.inventario.length) render(); // re-pinta charts con los nuevos colores del tema
 }
 
+// Si la ventana cruza el umbral de "modo proyección" (≥1800px) — por ejemplo al
+// mover la ventana a la pantalla de la sala de juntas — se repintan los charts
+// para que el texto de Chart.js (canvas) tome el tamaño grande. Con debounce para
+// no redibujar en cada píxel mientras se arrastra la ventana.
+let anchoAnterior = window.innerWidth;
+let resizeDebounce = null;
+window.addEventListener('resize', ()=>{
+  clearTimeout(resizeDebounce);
+  resizeDebounce = setTimeout(()=>{
+    const cruzoUmbral = (anchoAnterior < 1800) !== (window.innerWidth < 1800);
+    anchoAnterior = window.innerWidth;
+    if(cruzoUmbral && RAW.inventario.length) render();
+  }, 250);
+});
+
 function cambiarPagina(n, btn){
   [1,2,3,4].forEach(i=>{
     document.getElementById('pagina'+i).classList.toggle('hidden', i!==n);
@@ -475,6 +543,57 @@ function cambiarPagina(n, btn){
 
 function toggleAdminPanel(){
   document.getElementById('avisoConfig').classList.toggle('hidden');
+}
+
+// ---- Candado de información de almacén (gráficos, KPI y datos monetarios) ----
+// Protección de nivel de interfaz para no mostrar cifras a simple vista (ej. una
+// pantalla visible en recepción): no es seguridad real — el data.json sigue siendo
+// público y cualquiera con las herramientas de desarrollador vería la contraseña
+// en el código fuente. Sirve para que nadie vea las cifras por descuido, no para
+// protegerlas de alguien que las busque a propósito.
+const PASSWORD_GERENCIA = 'Gerencia1';
+let panelDesbloqueado = false;
+
+function aplicarVisibilidadPanel(){
+  document.getElementById('panelProtegido').classList.toggle('hidden', !panelDesbloqueado);
+  document.getElementById('badgesInfo').classList.toggle('hidden', !panelDesbloqueado);
+  document.getElementById('botonesAlmacen').classList.toggle('hidden', !panelDesbloqueado);
+  const icon = document.getElementById('iconLock');
+  icon.className = panelDesbloqueado ? 'fa-solid fa-lock-open text-sm' : 'fa-solid fa-lock text-sm';
+}
+
+function onClickLockToggle(){
+  if(panelDesbloqueado){
+    panelDesbloqueado = false;
+    aplicarVisibilidadPanel();
+  } else {
+    abrirModalPassword();
+  }
+}
+
+function abrirModalPassword(){
+  document.getElementById('modalPasswordOverlay').classList.remove('hidden');
+  document.getElementById('passwordError').classList.add('hidden');
+  const input = document.getElementById('inputPassword');
+  input.value = '';
+  setTimeout(()=>input.focus(), 50);
+}
+
+function cerrarModalPassword(){
+  document.getElementById('modalPasswordOverlay').classList.add('hidden');
+}
+
+function intentarDesbloquear(){
+  const input = document.getElementById('inputPassword');
+  if(input.value === PASSWORD_GERENCIA){
+    panelDesbloqueado = true;
+    aplicarVisibilidadPanel();
+    cerrarModalPassword();
+  } else {
+    document.getElementById('passwordError').classList.remove('hidden');
+    input.value = '';
+    input.focus();
+  }
 }
 
 let debounceBuscador = null;
@@ -745,6 +864,7 @@ function seleccionar(nombre, btn){
 }
 
 function render(){
+  Chart.defaults.font.size = chartFontSize();
   const inv = almacenSel==='TODOS' ? RAW.inventario : RAW.inventario.filter(i=>i.alm===almacenSel);
   const mov = almacenSel==='TODOS' ? RAW.movimientos : RAW.movimientos.filter(m=>m.alm===almacenSel);
   const mov201 = mov.filter(m=>m.clase==='201');
@@ -1012,7 +1132,7 @@ function renderDona(){
     type:'doughnut',
     data:{ labels:[almLabel(itaboNombre),almLabel(herreraNombre),'Dependencias (consolidado)'], datasets:[{ data:[itabo,herrera,dependencias], backgroundColor:[c.blue,c.orange,c.aqua], borderColor:c.surface, borderWidth:3, offset:offsets }]},
     options:{ responsive:true, maintainAspectRatio:false, animation:{ animateRotate:true, animateScale:true, duration:700, easing:'easeOutQuart' },
-      plugins:{ legend:{position:'bottom', labels:{color:c.textSecondary,font:{size:11,weight:'bold'},usePointStyle:true,pointStyle:'circle'}},
+      plugins:{ legend:{position:'bottom', labels:{color:c.textSecondary,font:{size:c.fsSm,weight:'bold'},usePointStyle:true,pointStyle:'circle'}},
         tooltip:{ backgroundColor:c.surface, titleColor:c.textPrimary, bodyColor:c.textSecondary, borderColor:c.grid, borderWidth:1, padding:10,
           callbacks:{ label:c2=> ` ${c2.label}: ${fmtCurr(c2.raw)} (${fmtPct(c2.raw/total*100)})` } } },
       cutout:'65%' }
@@ -1134,7 +1254,7 @@ function renderFamilias(inv){
     options:{ indexAxis:'y', responsive:true, maintainAspectRatio:false, animation:{ duration:600, easing:'easeOutQuart' },
       plugins:{ legend:{display:false}, tooltip:{ backgroundColor:c.surface, titleColor:c.textPrimary, bodyColor:c.textSecondary, borderColor:c.grid, borderWidth:1, padding:10, callbacks:{ label:c2=>` ${fmtInt(c2.raw)} unidades (exacto, todas las medidas combinadas)` } } },
       scales:{ x:{grid:{color:c.grid},ticks:{color:c.textSecondary, callback:v=>fmtCompactNum(v), maxRotation:0, minRotation:0, autoSkip:true, maxTicksLimit:6},beginAtZero:true},
-        y:{grid:{display:false},ticks:{color:c.textSecondary,font:{size:11}}} } }
+        y:{grid:{display:false},ticks:{color:c.textSecondary,font:{size:c.fsSm}}} } }
   });
 
   if(charts.famValor) charts.famValor.destroy();
@@ -1145,7 +1265,7 @@ function renderFamilias(inv){
     options:{ indexAxis:'y', responsive:true, maintainAspectRatio:false, animation:{ duration:600, easing:'easeOutQuart' },
       plugins:{ legend:{display:false}, tooltip:{ backgroundColor:c.surface, titleColor:c.textPrimary, bodyColor:c.textSecondary, borderColor:c.grid, borderWidth:1, padding:10, callbacks:{ label:c2=>` ${fmtCurr(c2.raw)} (exacto)` } } },
       scales:{ x:{grid:{color:c.grid},ticks:{color:c.textSecondary, callback:v=>fmtCompactCurr(v), maxRotation:0, minRotation:0, autoSkip:true, maxTicksLimit:6},beginAtZero:true},
-        y:{grid:{display:false},ticks:{color:c.textSecondary,font:{size:11}}} } }
+        y:{grid:{display:false},ticks:{color:c.textSecondary,font:{size:c.fsSm}}} } }
   });
 
   // --- % SKU por familia: top 7 categóricos + "Otras" (fold) — nunca más de 8 tonos ---
