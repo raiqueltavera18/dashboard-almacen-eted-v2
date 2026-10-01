@@ -6,6 +6,7 @@
 <title>ETED - Gerencia de Almacén</title>
 <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
@@ -419,6 +420,9 @@ table tbody tr:hover{ background:var(--surface-sunk); }
 </div>
 
 <script>
+// Etiquetas de valor visibles en todas las gráficas (chartjs-plugin-datalabels).
+if(window.ChartDataLabels){ Chart.register(ChartDataLabels); }
+
 const ALMACEN_MAP_FALLBACK = {
   '1101':'Itabo','1102':'Herrera','1103':'Santiago','1104':'Pimentel',
   '1105':'San Pedro','1106':'Azua','1108':'Suministro','1111':'UNTFO'
@@ -1033,10 +1037,12 @@ function renderEntradasSalidas(mov){
       { label:'Entradas (101)', data: dataEntradas, backgroundColor: hexToRgba(c.blue,.78), borderColor:c.blue, borderWidth:1.5, borderRadius:4, maxBarThickness:26 },
       { label:'Salidas (201)', data: dataSalidas, backgroundColor: hexToRgba(c.red,.78), borderColor:c.red, borderWidth:1.5, borderRadius:4, maxBarThickness:26 }
     ]},
-    options:{ responsive:true, maintainAspectRatio:false,
+    options:{ responsive:true, maintainAspectRatio:false, layout:{ padding:{ top:20, bottom:20 } },
       plugins:{ legend:{labels:{color:c.textSecondary,font:{weight:'bold'},usePointStyle:true,pointStyle:'circle'}},
         tooltip:{ backgroundColor:c.surface, titleColor:c.textPrimary, bodyColor:c.textSecondary, borderColor:c.grid, borderWidth:1, padding:10,
-          callbacks:{ label:c2=> ` ${c2.dataset.label}: ${Math.abs(c2.raw)} documento(s) único(s)` } } },
+          callbacks:{ label:c2=> ` ${c2.dataset.label}: ${Math.abs(c2.raw)} documento(s) único(s)` } },
+        datalabels:{ color:c.textPrimary, font:{size:c.fsSm,weight:'bold'}, anchor:'end', align:'end',
+          formatter:v=> v===0 ? '' : fmtInt(Math.abs(v)) } },
       scales:{ x:{grid:{color:c.grid},ticks:{color:c.textSecondary}},
         y:{grid:{color:c.grid},ticks:{color:c.textSecondary, callback:v=>Math.abs(v)} } } }
   });
@@ -1062,7 +1068,7 @@ function renderOtrosMovimientos(mov){
   charts.otros = new Chart(document.getElementById('chartOtros').getContext('2d'), {
     type:'bar',
     data:{ labels, datasets:[{ label:'Otros movimientos', data, backgroundColor: hexToRgba(c.violet,.75), borderColor:c.violet, borderWidth:1.5, borderRadius:4, maxBarThickness:30 }]},
-    options:{ responsive:true, maintainAspectRatio:false,
+    options:{ responsive:true, maintainAspectRatio:false, layout:{ padding:{ top:20 } },
       plugins:{ legend:{display:false},
         tooltip:{ backgroundColor:c.surface, titleColor:c.textPrimary, bodyColor:c.textSecondary, borderColor:c.grid, borderWidth:1, padding:10,
           callbacks:{ label:c2=>{
@@ -1070,7 +1076,9 @@ function renderOtrosMovimientos(mov){
           const detalle = porMesClase[mIdx] || {};
           const partes = Object.entries(detalle).sort((a,b)=>b[1]-a[1]).map(([cl,ct])=>`Clase ${cl}: ${ct}`);
           return [' Total: ' + c2.raw + ' movimiento(s)', ...partes];
-        } } } },
+        } } },
+        datalabels:{ color:c.textPrimary, font:{size:c.fsSm,weight:'bold'}, anchor:'end', align:'end',
+          formatter:v=> v===0 ? '' : fmtInt(v) } },
       scales:{ x:{grid:{color:c.grid},ticks:{color:c.textSecondary}}, y:{grid:{color:c.grid},ticks:{color:c.textSecondary},beginAtZero:true} } }
   });
 }
@@ -1134,7 +1142,9 @@ function renderDona(){
     options:{ responsive:true, maintainAspectRatio:false, animation:{ animateRotate:true, animateScale:true, duration:700, easing:'easeOutQuart' },
       plugins:{ legend:{position:'bottom', labels:{color:c.textSecondary,font:{size:c.fsSm,weight:'bold'},usePointStyle:true,pointStyle:'circle'}},
         tooltip:{ backgroundColor:c.surface, titleColor:c.textPrimary, bodyColor:c.textSecondary, borderColor:c.grid, borderWidth:1, padding:10,
-          callbacks:{ label:c2=> ` ${c2.label}: ${fmtCurr(c2.raw)} (${fmtPct(c2.raw/total*100)})` } } },
+          callbacks:{ label:c2=> ` ${c2.label}: ${fmtCurr(c2.raw)} (${fmtPct(c2.raw/total*100)})` } },
+        datalabels:{ color:'#fff', font:{size:c.fsSm,weight:'bold'}, display:'auto',
+          formatter:v=> fmtPct(v/total*100) } },
       cutout:'65%' }
   });
 }
@@ -1149,8 +1159,10 @@ function renderVolumen(){
   charts.vol = new Chart(document.getElementById('chartVolumen').getContext('2d'), {
     type:'bar',
     data:{ labels, datasets:[{ label:'Unidades (Libre utilización)', data, backgroundColor: hexToRgba(c.aqua,.7), borderColor:c.aqua, borderWidth:1.5, borderRadius:4, maxBarThickness:34 }]},
-    options:{ responsive:true, maintainAspectRatio:false, animation:{ duration:600, easing:'easeOutQuart' },
-      plugins:{ legend:{display:false}, tooltip:{ backgroundColor:c.surface, titleColor:c.textPrimary, bodyColor:c.textSecondary, borderColor:c.grid, borderWidth:1, padding:10, callbacks:{ label:c2=>` ${fmtInt(c2.raw)} unidades (exacto)` } } },
+    options:{ responsive:true, maintainAspectRatio:false, animation:{ duration:600, easing:'easeOutQuart' }, layout:{ padding:{ top:24 } },
+      plugins:{ legend:{display:false}, tooltip:{ backgroundColor:c.surface, titleColor:c.textPrimary, bodyColor:c.textSecondary, borderColor:c.grid, borderWidth:1, padding:10, callbacks:{ label:c2=>` ${fmtInt(c2.raw)} unidades (exacto)` } },
+        datalabels:{ color:c.textPrimary, font:{size:c.fsSm,weight:'bold'}, anchor:'end', align:'end',
+          formatter:v=> v===0 ? '' : fmtCompactNum(v) } },
       scales:{ x:{grid:{color:c.grid},ticks:{color:c.textSecondary}},
         y:{grid:{color:c.grid},ticks:{color:c.textSecondary, callback:v=>fmtCompactNum(v)},beginAtZero:true} } }
   });
@@ -1167,8 +1179,10 @@ function renderMonetario(){
   charts.mon = new Chart(document.getElementById('chartMonetario').getContext('2d'), {
     type:'bar',
     data:{ labels, datasets:[{ label:'Valor (RD$)', data, backgroundColor: hexToRgba(c.blue,.7), borderColor:c.blue, borderWidth:1.5, borderRadius:4, maxBarThickness:26 }]},
-    options:{ responsive:true, maintainAspectRatio:false, animation:{ duration:600, easing:'easeOutQuart' },
-      plugins:{ legend:{display:false}, tooltip:{ backgroundColor:c.surface, titleColor:c.textPrimary, bodyColor:c.textSecondary, borderColor:c.grid, borderWidth:1, padding:10, callbacks:{ label:c2=>` ${fmtCurr(c2.raw)} (${fmtPct(c2.raw/total*100)} del total general)` } } },
+    options:{ responsive:true, maintainAspectRatio:false, animation:{ duration:600, easing:'easeOutQuart' }, layout:{ padding:{ top:24 } },
+      plugins:{ legend:{display:false}, tooltip:{ backgroundColor:c.surface, titleColor:c.textPrimary, bodyColor:c.textSecondary, borderColor:c.grid, borderWidth:1, padding:10, callbacks:{ label:c2=>` ${fmtCurr(c2.raw)} (${fmtPct(c2.raw/total*100)} del total general)` } },
+        datalabels:{ color:c.textPrimary, font:{size:c.fsSm,weight:'bold'}, anchor:'end', align:'end',
+          formatter:v=> v===0 ? '' : fmtCompactCurr(v) } },
       scales:{ x:{grid:{color:c.grid},ticks:{color:c.textSecondary}},
         y:{grid:{color:c.grid},ticks:{color:c.textSecondary, callback:v=>fmtCompactCurr(v)},beginAtZero:true} } }
   });
@@ -1251,8 +1265,10 @@ function renderFamilias(inv){
     type:'bar',
     data:{ labels: familiasCant.map(([f])=>f),
       datasets:[{ label:'Cantidad', data: familiasCant.map(([,v])=>v), backgroundColor: hexToRgba(c.aqua,.7), borderColor:c.aqua, borderWidth:1.5, borderRadius:4, maxBarThickness:20 }] },
-    options:{ indexAxis:'y', responsive:true, maintainAspectRatio:false, animation:{ duration:600, easing:'easeOutQuart' },
-      plugins:{ legend:{display:false}, tooltip:{ backgroundColor:c.surface, titleColor:c.textPrimary, bodyColor:c.textSecondary, borderColor:c.grid, borderWidth:1, padding:10, callbacks:{ label:c2=>` ${fmtInt(c2.raw)} unidades (exacto, todas las medidas combinadas)` } } },
+    options:{ indexAxis:'y', responsive:true, maintainAspectRatio:false, animation:{ duration:600, easing:'easeOutQuart' }, layout:{ padding:{ right:50 } },
+      plugins:{ legend:{display:false}, tooltip:{ backgroundColor:c.surface, titleColor:c.textPrimary, bodyColor:c.textSecondary, borderColor:c.grid, borderWidth:1, padding:10, callbacks:{ label:c2=>` ${fmtInt(c2.raw)} unidades (exacto, todas las medidas combinadas)` } },
+        datalabels:{ color:c.textSecondary, font:{size:c.fsSm,weight:'bold'}, anchor:'end', align:'end',
+          formatter:v=> v===0 ? '' : fmtCompactNum(v) } },
       scales:{ x:{grid:{color:c.grid},ticks:{color:c.textSecondary, callback:v=>fmtCompactNum(v), maxRotation:0, minRotation:0, autoSkip:true, maxTicksLimit:6},beginAtZero:true},
         y:{grid:{display:false},ticks:{color:c.textSecondary,font:{size:c.fsSm}}} } }
   });
@@ -1262,8 +1278,10 @@ function renderFamilias(inv){
     type:'bar',
     data:{ labels: familiasValor.map(([f])=>f),
       datasets:[{ label:'Valor', data: familiasValor.map(([,v])=>v), backgroundColor: hexToRgba(c.blue,.7), borderColor:c.blue, borderWidth:1.5, borderRadius:4, maxBarThickness:20 }] },
-    options:{ indexAxis:'y', responsive:true, maintainAspectRatio:false, animation:{ duration:600, easing:'easeOutQuart' },
-      plugins:{ legend:{display:false}, tooltip:{ backgroundColor:c.surface, titleColor:c.textPrimary, bodyColor:c.textSecondary, borderColor:c.grid, borderWidth:1, padding:10, callbacks:{ label:c2=>` ${fmtCurr(c2.raw)} (exacto)` } } },
+    options:{ indexAxis:'y', responsive:true, maintainAspectRatio:false, animation:{ duration:600, easing:'easeOutQuart' }, layout:{ padding:{ right:50 } },
+      plugins:{ legend:{display:false}, tooltip:{ backgroundColor:c.surface, titleColor:c.textPrimary, bodyColor:c.textSecondary, borderColor:c.grid, borderWidth:1, padding:10, callbacks:{ label:c2=>` ${fmtCurr(c2.raw)} (exacto)` } },
+        datalabels:{ color:c.textSecondary, font:{size:c.fsSm,weight:'bold'}, anchor:'end', align:'end',
+          formatter:v=> v===0 ? '' : fmtCompactCurr(v) } },
       scales:{ x:{grid:{color:c.grid},ticks:{color:c.textSecondary, callback:v=>fmtCompactCurr(v), maxRotation:0, minRotation:0, autoSkip:true, maxTicksLimit:6},beginAtZero:true},
         y:{grid:{display:false},ticks:{color:c.textSecondary,font:{size:c.fsSm}}} } }
   });
@@ -1286,7 +1304,9 @@ function renderFamilias(inv){
     data:{ labels: skuCounts.map(([f])=>f),
       datasets:[{ data: skuCounts.map(([,c2])=>c2), backgroundColor: colores, borderColor:c.surface, borderWidth:2 }] },
     options:{ responsive:true, maintainAspectRatio:false, animation:{ duration:700, easing:'easeOutQuart' },
-      plugins:{ legend:{display:false}, tooltip:{ backgroundColor:c.surface, titleColor:c.textPrimary, bodyColor:c.textSecondary, borderColor:c.grid, borderWidth:1, padding:10, callbacks:{ label:c2=>` ${c2.label}: ${fmtInt(c2.raw)} SKU (${fmtPct(c2.raw/totalSkus*100)})` } } },
+      plugins:{ legend:{display:false}, tooltip:{ backgroundColor:c.surface, titleColor:c.textPrimary, bodyColor:c.textSecondary, borderColor:c.grid, borderWidth:1, padding:10, callbacks:{ label:c2=>` ${c2.label}: ${fmtInt(c2.raw)} SKU (${fmtPct(c2.raw/totalSkus*100)})` } },
+        datalabels:{ color:'#fff', font:{size:c.fsSm,weight:'bold'}, display:'auto',
+          formatter:v=> fmtPct(v/totalSkus*100) } },
       cutout:'55%' }
   });
 
