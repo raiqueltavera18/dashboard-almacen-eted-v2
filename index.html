@@ -184,15 +184,16 @@ table tbody tr:hover{ background:var(--surface-sunk); }
   <div id="pagina1" class="space-y-6">
   <!-- ============== KPI HERO ROW ============== -->
   <section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-    <div class="card p-5">
+    <div class="card p-5 cursor-pointer hover:shadow-lg transition-shadow" onclick="abrirDetalleKpi('valorTotal')" title="Clic para ver el desglose por almacén en una pestaña nueva">
       <div class="flex items-start justify-between">
         <div>
           <p class="text-secondary text-xs font-bold uppercase tracking-wider">Valor Total en Inventario</p>
-          <p class="text-2xl md:text-[1.7rem] font-black mt-2 kpi-value cursor-help" style="color:var(--blue)" id="kpiValor">RD$ 0.00</p>
+          <p class="text-2xl md:text-[1.7rem] font-black mt-2 kpi-value" style="color:var(--blue)" id="kpiValor">RD$ 0.00</p>
           <p class="text-[11px] font-semibold mt-1" style="color:var(--blue)" id="kpiValorPct">—</p>
         </div>
         <div class="stat-icon" style="background:color-mix(in oklab, var(--blue) 14%, transparent); color:var(--blue)"><i class="fa-solid fa-sack-dollar"></i></div>
       </div>
+      <p class="text-[10px] font-bold text-muted mt-2"><i class="fa-solid fa-up-right-from-square mr-1"></i>Ver desglose</p>
     </div>
     <div class="card p-5">
       <div class="flex items-start justify-between mb-1">
@@ -200,28 +201,29 @@ table tbody tr:hover{ background:var(--surface-sunk); }
         <span id="badgeSalud" class="badge-dot"></span>
       </div>
       <div class="grid grid-cols-2 gap-3 mt-1">
-        <div>
+        <div class="cursor-pointer hover:opacity-80 transition-opacity" onclick="abrirDetalleKpi('deadStock')" title="Clic para ver el listado de materiales sin movimiento en una pestaña nueva">
           <p class="text-[10px] text-muted uppercase font-bold tracking-wide">Capital Inmovilizado</p>
-          <p class="text-lg md:text-xl font-black kpi-value cursor-help" style="color:var(--critical)" id="kpiDeadStock">RD$ 0</p>
+          <p class="text-lg md:text-xl font-black kpi-value" style="color:var(--critical)" id="kpiDeadStock">RD$ 0</p>
           <p class="text-[10px] font-semibold mt-0.5" style="color:var(--critical)" id="kpiDeadStockPct">—</p>
         </div>
-        <div class="border-l pl-3" style="border-color:var(--border)">
+        <div class="border-l pl-3 cursor-pointer hover:opacity-80 transition-opacity" style="border-color:var(--border)" onclick="abrirDetalleKpi('dio')" title="Clic para ver cómo se calculó, en una pestaña nueva">
           <p class="text-[10px] text-muted uppercase font-bold tracking-wide">Días de Cobertura</p>
-          <p class="text-lg md:text-xl font-black kpi-value cursor-help" style="color:var(--text-primary)" id="kpiDIO">— d</p>
+          <p class="text-lg md:text-xl font-black kpi-value" style="color:var(--text-primary)" id="kpiDIO">— d</p>
           <p class="text-[10px] font-semibold mt-0.5 text-secondary" id="kpiDIOInfo">—</p>
         </div>
       </div>
     </div>
-    <div class="card p-5">
+    <div class="card p-5 cursor-pointer hover:shadow-lg transition-shadow" onclick="abrirDetalleKpi('salidas201')" title="Clic para ver el listado de salidas en una pestaña nueva">
       <div class="flex items-start justify-between">
         <div>
           <p class="text-secondary text-xs font-bold uppercase tracking-wider">Salidas Clase 201 (2026)</p>
-          <p class="text-2xl md:text-[1.7rem] font-black mt-2 kpi-value cursor-help" style="color:var(--aqua)" id="kpiSalidas">0 u.</p>
+          <p class="text-2xl md:text-[1.7rem] font-black mt-2 kpi-value" style="color:var(--aqua)" id="kpiSalidas">0 u.</p>
         </div>
         <div class="stat-icon" style="background:color-mix(in oklab, var(--aqua) 16%, transparent); color:var(--aqua)"><i class="fa-solid fa-arrow-right-from-bracket"></i></div>
       </div>
+      <p class="text-[10px] font-bold text-muted mt-2"><i class="fa-solid fa-up-right-from-square mr-1"></i>Ver listado</p>
     </div>
-    <div class="card p-5">
+    <div class="card p-5 cursor-pointer hover:shadow-lg transition-shadow" onclick="abrirDetalleKpi('skuVista')" title="Clic para ver el listado completo de materiales en una pestaña nueva">
       <div class="flex items-start justify-between">
         <div>
           <p class="text-secondary text-xs font-bold uppercase tracking-wider">Materiales (SKU) en Vista</p>
@@ -229,6 +231,7 @@ table tbody tr:hover{ background:var(--surface-sunk); }
         </div>
         <div class="stat-icon" style="background:var(--surface-sunk); color:var(--text-secondary)"><i class="fa-solid fa-boxes-stacked"></i></div>
       </div>
+      <p class="text-[10px] font-bold text-muted mt-2"><i class="fa-solid fa-up-right-from-square mr-1"></i>Ver listado</p>
     </div>
   </section>
 
@@ -495,6 +498,17 @@ function almLabel(nombre){
   const cod = almCodeMap[nombre];
   return cod ? `${nombre} (${cod})` : nombre;
 }
+
+// ---- Pestaña de consulta: abre detalle.html en una pestaña nueva con el
+// tema actual heredado, para que la ficha luzca igual que el dashboard. ----
+function abrirDetalle(params){
+  const qs = new URLSearchParams({ theme: document.documentElement.getAttribute('data-theme') || 'light', ...params });
+  window.open('detalle.html?' + qs.toString(), '_blank');
+}
+function abrirDetalleMaterial(cod){ abrirDetalle({ tipo:'material', cod }); }
+function abrirDetalleAlmacen(alm){ abrirDetalle({ tipo:'almacen', alm }); }
+function abrirDetalleFamilia(fam){ abrirDetalle({ tipo:'familia', fam }); }
+function abrirDetalleKpi(kpi){ abrirDetalle({ tipo:'kpi', kpi, alm: almacenSel }); }
 
 // Fecha de la última actualización de datos (día más reciente en que se generó/cargó
 // el data.json) — no es el período de movimientos, sino cuándo se refrescó la fuente.
@@ -1152,15 +1166,17 @@ function renderDona(){
 function renderVolumen(){
   const c = C();
   const map = aggVolPorAlmacen();
-  let labels, data;
-  if(almacenSel === 'TODOS'){ labels = Object.keys(map).map(almLabel); data = Object.values(map); }
-  else { labels = [almLabel(almacenSel)]; data = [map[almacenSel] || 0]; }
+  let labels, data, rawLabels;
+  if(almacenSel === 'TODOS'){ rawLabels = Object.keys(map); labels = rawLabels.map(almLabel); data = Object.values(map); }
+  else { rawLabels = [almacenSel]; labels = [almLabel(almacenSel)]; data = [map[almacenSel] || 0]; }
   if(charts.vol) charts.vol.destroy();
   charts.vol = new Chart(document.getElementById('chartVolumen').getContext('2d'), {
     type:'bar',
     data:{ labels, datasets:[{ label:'Unidades (Libre utilización)', data, backgroundColor: hexToRgba(c.aqua,.7), borderColor:c.aqua, borderWidth:1.5, borderRadius:4, maxBarThickness:34 }]},
     options:{ responsive:true, maintainAspectRatio:false, animation:{ duration:600, easing:'easeOutQuart' }, layout:{ padding:{ top:24 } },
-      plugins:{ legend:{display:false}, tooltip:{ backgroundColor:c.surface, titleColor:c.textPrimary, bodyColor:c.textSecondary, borderColor:c.grid, borderWidth:1, padding:10, callbacks:{ label:c2=>` ${fmtInt(c2.raw)} unidades (exacto)` } },
+      onHover:(evt,els)=>{ evt.native.target.style.cursor = els.length ? 'pointer' : 'default'; },
+      onClick:(evt,els)=>{ if(els.length) abrirDetalleAlmacen(rawLabels[els[0].index]); },
+      plugins:{ legend:{display:false}, tooltip:{ backgroundColor:c.surface, titleColor:c.textPrimary, bodyColor:c.textSecondary, borderColor:c.grid, borderWidth:1, padding:10, callbacks:{ label:c2=>` ${fmtInt(c2.raw)} unidades (exacto) — clic para ver el detalle` } },
         datalabels:{ color:c.textPrimary, font:{size:c.fsSm,weight:'bold'}, anchor:'end', align:'end',
           formatter:v=> v===0 ? '' : fmtCompactNum(v) } },
       scales:{ x:{grid:{color:c.grid},ticks:{color:c.textSecondary}},
@@ -1172,15 +1188,17 @@ function renderMonetario(){
   const c = C();
   const map = aggValorPorAlmacen();
   const total = Object.values(map).reduce((a,b)=>a+b,0) || 1;
-  let labels, data;
-  if(almacenSel === 'TODOS'){ labels = Object.keys(map).map(almLabel); data = Object.values(map); }
-  else { labels = [almLabel(almacenSel)]; data = [map[almacenSel] || 0]; }
+  let labels, data, rawLabels;
+  if(almacenSel === 'TODOS'){ rawLabels = Object.keys(map); labels = rawLabels.map(almLabel); data = Object.values(map); }
+  else { rawLabels = [almacenSel]; labels = [almLabel(almacenSel)]; data = [map[almacenSel] || 0]; }
   if(charts.mon) charts.mon.destroy();
   charts.mon = new Chart(document.getElementById('chartMonetario').getContext('2d'), {
     type:'bar',
     data:{ labels, datasets:[{ label:'Valor (RD$)', data, backgroundColor: hexToRgba(c.blue,.7), borderColor:c.blue, borderWidth:1.5, borderRadius:4, maxBarThickness:26 }]},
     options:{ responsive:true, maintainAspectRatio:false, animation:{ duration:600, easing:'easeOutQuart' }, layout:{ padding:{ top:24 } },
-      plugins:{ legend:{display:false}, tooltip:{ backgroundColor:c.surface, titleColor:c.textPrimary, bodyColor:c.textSecondary, borderColor:c.grid, borderWidth:1, padding:10, callbacks:{ label:c2=>` ${fmtCurr(c2.raw)} (${fmtPct(c2.raw/total*100)} del total general)` } },
+      onHover:(evt,els)=>{ evt.native.target.style.cursor = els.length ? 'pointer' : 'default'; },
+      onClick:(evt,els)=>{ if(els.length) abrirDetalleAlmacen(rawLabels[els[0].index]); },
+      plugins:{ legend:{display:false}, tooltip:{ backgroundColor:c.surface, titleColor:c.textPrimary, bodyColor:c.textSecondary, borderColor:c.grid, borderWidth:1, padding:10, callbacks:{ label:c2=>` ${fmtCurr(c2.raw)} (${fmtPct(c2.raw/total*100)} del total general) — clic para ver el detalle` } },
         datalabels:{ color:c.textPrimary, font:{size:c.fsSm,weight:'bold'}, anchor:'end', align:'end',
           formatter:v=> v===0 ? '' : fmtCompactCurr(v) } },
       scales:{ x:{grid:{color:c.grid},ticks:{color:c.textSecondary}},
@@ -1208,8 +1226,9 @@ function renderTop10Rotacion(mov){
   const sorted = Object.values(map).sort((a,b)=>b.total-a.total).slice(0,10);
   const tbody = document.getElementById('tblRotacion');
   tbody.innerHTML = sorted.length ? sorted.map((it,i)=>`
-    <tr><td class="p-3 font-bold font-mono" style="color:var(--yellow)">${i+1}</td>
-    <td class="p-3 font-mono font-semibold" style="color:var(--blue)">${it.cod}</td>
+    <tr class="cursor-pointer" onclick="abrirDetalleMaterial('${it.cod.replace(/'/g,"\\'")}')" title="Clic para ver la ficha completa de este material en una pestaña nueva">
+    <td class="p-3 font-bold font-mono" style="color:var(--yellow)">${i+1}</td>
+    <td class="p-3 font-mono font-semibold hover:underline" style="color:var(--blue)">${it.cod}</td>
     <td class="p-3 max-w-xs truncate" title="${it.desc}">${it.desc}</td>
     <td class="p-3 text-right font-bold font-mono tabular" style="color:var(--yellow)" title="Entradas (101): ${it.c101} · Salidas (201): ${it.c201}">${fmtInt(it.total)} mov.</td></tr>`).join('')
     : '<tr><td colspan="4" class="p-4 text-center text-muted">Sin movimientos de entrada/salida para este filtro.</td></tr>';
@@ -1218,8 +1237,9 @@ function renderTop10Rotacion(mov){
 function renderTop10Valor(inv){
   const sorted = [...inv].sort((a,b)=>b.valor-a.valor).slice(0,10);
   document.getElementById('tblValor').innerHTML = sorted.map((it,i)=>`
-    <tr><td class="p-3 font-bold font-mono" style="color:var(--blue)">${i+1}</td>
-    <td class="p-3 font-mono font-semibold" style="color:var(--blue)">${it.cod}</td>
+    <tr class="cursor-pointer" onclick="abrirDetalleMaterial('${it.cod.replace(/'/g,"\\'")}')" title="Clic para ver la ficha completa de este material en una pestaña nueva">
+    <td class="p-3 font-bold font-mono" style="color:var(--blue)">${i+1}</td>
+    <td class="p-3 font-mono font-semibold hover:underline" style="color:var(--blue)">${it.cod}</td>
     <td class="p-3 max-w-xs truncate" title="${it.desc}">${it.desc}</td>
     <td class="p-3 text-right font-bold font-mono tabular">${fmtCurr(it.valor)}</td></tr>`).join('');
 }
@@ -1227,8 +1247,9 @@ function renderTop10Valor(inv){
 function renderTop10MayorVol(inv){
   const sorted = [...inv].sort((a,b)=>b.cant-a.cant).slice(0,10);
   document.getElementById('tblMayorVol').innerHTML = sorted.map((it,i)=>`
-    <tr><td class="p-3 font-bold font-mono" style="color:var(--aqua)">${i+1}</td>
-    <td class="p-3 font-mono font-semibold" style="color:var(--blue)">${it.cod}</td>
+    <tr class="cursor-pointer" onclick="abrirDetalleMaterial('${it.cod.replace(/'/g,"\\'")}')" title="Clic para ver la ficha completa de este material en una pestaña nueva">
+    <td class="p-3 font-bold font-mono" style="color:var(--aqua)">${i+1}</td>
+    <td class="p-3 font-mono font-semibold hover:underline" style="color:var(--blue)">${it.cod}</td>
     <td class="p-3 max-w-xs truncate" title="${it.desc}">${it.desc}</td>
     <td class="p-3 text-right font-bold font-mono tabular" style="color:var(--aqua)">${fmtInt(it.cant)} ${it.uni}</td></tr>`).join('');
 }
@@ -1237,8 +1258,9 @@ function renderTop10MenorVol(inv){
   const conStock = inv.filter(i=>i.cant>0);
   const sorted = [...conStock].sort((a,b)=>a.cant-b.cant).slice(0,10);
   document.getElementById('tblMenorVol').innerHTML = sorted.length ? sorted.map((it,i)=>`
-    <tr><td class="p-3 font-bold font-mono" style="color:var(--critical)">${i+1}</td>
-    <td class="p-3 font-mono font-semibold" style="color:var(--blue)">${it.cod}</td>
+    <tr class="cursor-pointer" onclick="abrirDetalleMaterial('${it.cod.replace(/'/g,"\\'")}')" title="Clic para ver la ficha completa de este material en una pestaña nueva">
+    <td class="p-3 font-bold font-mono" style="color:var(--critical)">${i+1}</td>
+    <td class="p-3 font-mono font-semibold hover:underline" style="color:var(--blue)">${it.cod}</td>
     <td class="p-3 max-w-xs truncate" title="${it.desc}">${it.desc}</td>
     <td class="p-3 text-right font-bold font-mono tabular" style="color:var(--critical)">${fmtInt(it.cant)} ${it.uni}</td></tr>`).join('')
     : '<tr><td colspan="4" class="p-4 text-center text-muted">Sin datos.</td></tr>';
@@ -1266,7 +1288,9 @@ function renderFamilias(inv){
     data:{ labels: familiasCant.map(([f])=>f),
       datasets:[{ label:'Cantidad', data: familiasCant.map(([,v])=>v), backgroundColor: hexToRgba(c.aqua,.7), borderColor:c.aqua, borderWidth:1.5, borderRadius:4, maxBarThickness:20 }] },
     options:{ indexAxis:'y', responsive:true, maintainAspectRatio:false, animation:{ duration:600, easing:'easeOutQuart' }, layout:{ padding:{ right:50 } },
-      plugins:{ legend:{display:false}, tooltip:{ backgroundColor:c.surface, titleColor:c.textPrimary, bodyColor:c.textSecondary, borderColor:c.grid, borderWidth:1, padding:10, callbacks:{ label:c2=>` ${fmtInt(c2.raw)} unidades (exacto, todas las medidas combinadas)` } },
+      onHover:(evt,els)=>{ evt.native.target.style.cursor = els.length ? 'pointer' : 'default'; },
+      onClick:(evt,els,chart)=>{ if(els.length) abrirDetalleFamilia(chart.data.labels[els[0].index]); },
+      plugins:{ legend:{display:false}, tooltip:{ backgroundColor:c.surface, titleColor:c.textPrimary, bodyColor:c.textSecondary, borderColor:c.grid, borderWidth:1, padding:10, callbacks:{ label:c2=>` ${fmtInt(c2.raw)} unidades (exacto, todas las medidas combinadas) — clic para ver el detalle` } },
         datalabels:{ color:c.textSecondary, font:{size:c.fsSm,weight:'bold'}, anchor:'end', align:'end',
           formatter:v=> v===0 ? '' : fmtCompactNum(v) } },
       scales:{ x:{grid:{color:c.grid},ticks:{color:c.textSecondary, callback:v=>fmtCompactNum(v), maxRotation:0, minRotation:0, autoSkip:true, maxTicksLimit:6},beginAtZero:true},
@@ -1279,7 +1303,9 @@ function renderFamilias(inv){
     data:{ labels: familiasValor.map(([f])=>f),
       datasets:[{ label:'Valor', data: familiasValor.map(([,v])=>v), backgroundColor: hexToRgba(c.blue,.7), borderColor:c.blue, borderWidth:1.5, borderRadius:4, maxBarThickness:20 }] },
     options:{ indexAxis:'y', responsive:true, maintainAspectRatio:false, animation:{ duration:600, easing:'easeOutQuart' }, layout:{ padding:{ right:50 } },
-      plugins:{ legend:{display:false}, tooltip:{ backgroundColor:c.surface, titleColor:c.textPrimary, bodyColor:c.textSecondary, borderColor:c.grid, borderWidth:1, padding:10, callbacks:{ label:c2=>` ${fmtCurr(c2.raw)} (exacto)` } },
+      onHover:(evt,els)=>{ evt.native.target.style.cursor = els.length ? 'pointer' : 'default'; },
+      onClick:(evt,els,chart)=>{ if(els.length) abrirDetalleFamilia(chart.data.labels[els[0].index]); },
+      plugins:{ legend:{display:false}, tooltip:{ backgroundColor:c.surface, titleColor:c.textPrimary, bodyColor:c.textSecondary, borderColor:c.grid, borderWidth:1, padding:10, callbacks:{ label:c2=>` ${fmtCurr(c2.raw)} (exacto) — clic para ver el detalle` } },
         datalabels:{ color:c.textSecondary, font:{size:c.fsSm,weight:'bold'}, anchor:'end', align:'end',
           formatter:v=> v===0 ? '' : fmtCompactCurr(v) } },
       scales:{ x:{grid:{color:c.grid},ticks:{color:c.textSecondary, callback:v=>fmtCompactCurr(v), maxRotation:0, minRotation:0, autoSkip:true, maxTicksLimit:6},beginAtZero:true},
@@ -1304,7 +1330,9 @@ function renderFamilias(inv){
     data:{ labels: skuCounts.map(([f])=>f),
       datasets:[{ data: skuCounts.map(([,c2])=>c2), backgroundColor: colores, borderColor:c.surface, borderWidth:2 }] },
     options:{ responsive:true, maintainAspectRatio:false, animation:{ duration:700, easing:'easeOutQuart' },
-      plugins:{ legend:{display:false}, tooltip:{ backgroundColor:c.surface, titleColor:c.textPrimary, bodyColor:c.textSecondary, borderColor:c.grid, borderWidth:1, padding:10, callbacks:{ label:c2=>` ${c2.label}: ${fmtInt(c2.raw)} SKU (${fmtPct(c2.raw/totalSkus*100)})` } },
+      onHover:(evt,els)=>{ evt.native.target.style.cursor = els.length ? 'pointer' : 'default'; },
+      onClick:(evt,els,chart)=>{ if(els.length){ const lbl = chart.data.labels[els[0].index]; abrirDetalleFamilia(lbl==='Otras' ? '__otras__' : lbl); } },
+      plugins:{ legend:{display:false}, tooltip:{ backgroundColor:c.surface, titleColor:c.textPrimary, bodyColor:c.textSecondary, borderColor:c.grid, borderWidth:1, padding:10, callbacks:{ label:c2=>` ${c2.label}: ${fmtInt(c2.raw)} SKU (${fmtPct(c2.raw/totalSkus*100)}) — clic para ver el detalle` } },
         datalabels:{ color:'#fff', font:{size:c.fsSm,weight:'bold'}, display:'auto',
           formatter:v=> fmtPct(v/totalSkus*100) } },
       cutout:'55%' }
@@ -1312,7 +1340,7 @@ function renderFamilias(inv){
 
   const listaEl = document.getElementById('listaFamilias');
   listaEl.innerHTML = skuCounts.map(([f,cnt], i)=>`
-    <div class="flex items-center gap-2 py-1.5 px-2.5 rounded-lg surface-sunk border border-token">
+    <div class="flex items-center gap-2 py-1.5 px-2.5 rounded-lg surface-sunk border border-token cursor-pointer hover:opacity-80 transition-opacity" onclick="abrirDetalleFamilia('${(f==='Otras'?'__otras__':f).replace(/'/g,"\\'")}')" title="Clic para ver los materiales de esta familia en una pestaña nueva">
       <span class="w-3 h-3 rounded-full flex-shrink-0" style="background:${f==='Otras' ? otrasColor : catColors[i % 7]}"></span>
       <span class="font-semibold text-secondary flex-1 truncate">${f}</span>
       <span class="font-mono font-bold tabular">${fmtInt(cnt)}</span>
