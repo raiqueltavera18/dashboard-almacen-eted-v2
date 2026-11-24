@@ -503,7 +503,9 @@ function almLabel(nombre){
 // tema actual heredado, para que la ficha luzca igual que el dashboard. ----
 function abrirDetalle(params){
   const qs = new URLSearchParams({ theme: document.documentElement.getAttribute('data-theme') || 'light', ...params });
-  window.open('detalle.html?' + qs.toString(), '_blank');
+  // 'noopener,noreferrer' fuerza una pestaña/ventana totalmente aparte en el
+  // mayor número de navegadores posible, sin tocar ni recargar este dashboard.
+  window.open('detalle.html?' + qs.toString(), '_blank', 'noopener,noreferrer');
 }
 function abrirDetalleMaterial(cod){ abrirDetalle({ tipo:'material', cod }); }
 function abrirDetalleAlmacen(alm){ abrirDetalle({ tipo:'almacen', alm }); }
@@ -570,7 +572,21 @@ function toggleAdminPanel(){
 // en el código fuente. Sirve para que nadie vea las cifras por descuido, no para
 // protegerlas de alguien que las busque a propósito.
 const PASSWORD_GERENCIA = 'Stok1100';
-let panelDesbloqueado = false;
+const LS_KEY_DESBLOQUEO = 'eted_panel_desbloqueado';
+
+// El desbloqueo se recuerda en este navegador (localStorage) para que abrir una
+// ficha de consulta en una pestaña nueva, o recargar el dashboard, no obligue a
+// volver a escribir la contraseña — solo el botón de candado la vuelve a pedir.
+function leerDesbloqueoGuardado(){
+  try{ return localStorage.getItem(LS_KEY_DESBLOQUEO) === '1'; }
+  catch(e){ return false; }
+}
+function guardarDesbloqueo(valor){
+  try{ localStorage.setItem(LS_KEY_DESBLOQUEO, valor ? '1' : '0'); }
+  catch(e){ /* almacenamiento no disponible (modo privado, etc.) — se ignora */ }
+}
+
+let panelDesbloqueado = leerDesbloqueoGuardado();
 
 function aplicarVisibilidadPanel(){
   document.getElementById('panelProtegido').classList.toggle('hidden', !panelDesbloqueado);
@@ -579,10 +595,13 @@ function aplicarVisibilidadPanel(){
   const icon = document.getElementById('iconLock');
   icon.className = panelDesbloqueado ? 'fa-solid fa-lock-open text-sm' : 'fa-solid fa-lock text-sm';
 }
+// Aplica el estado recordado apenas carga la página (antes de que lleguen los datos).
+aplicarVisibilidadPanel();
 
 function onClickLockToggle(){
   if(panelDesbloqueado){
     panelDesbloqueado = false;
+    guardarDesbloqueo(false);
     aplicarVisibilidadPanel();
   } else {
     abrirModalPassword();
@@ -605,6 +624,7 @@ function intentarDesbloquear(){
   const input = document.getElementById('inputPassword');
   if(input.value === PASSWORD_GERENCIA){
     panelDesbloqueado = true;
+    guardarDesbloqueo(true);
     aplicarVisibilidadPanel();
     cerrarModalPassword();
   } else {
